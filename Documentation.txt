@@ -1,0 +1,664 @@
+---
+
+
+
+\# 📘 TonmoyOS – Architecture v2
+
+
+
+Ubuntu-Inspired Multi-Page Portfolio
+
+Stack: Vite + React + Redux Toolkit + Tailwind + Firebase
+
+
+
+Inspired by:
+
+
+
+\* Ubuntu
+
+\* GNOME
+
+
+
+---
+
+
+
+\# 1. Core Structural Change
+
+
+
+\## ❌ No Single Page App
+
+
+
+\## ✅ Multi-Route Application (React Router)
+
+
+
+Each major system view is its own route:
+
+
+
+```text
+
+/
+
+/desktop
+
+/terminal
+
+/explorer/\*
+
+/admin/\*
+
+/section/:slug
+
+```
+
+
+
+This improves:
+
+
+
+\* Performance isolation
+
+\* Cleaner animation control
+
+\* Easier feature scaling
+
+\* Better SEO (for public sections)
+
+
+
+---
+
+
+
+\# 2. Frontend Page Organization
+
+
+
+\## Routes
+
+
+
+\### 1️⃣ `/` → Entry Controller
+
+
+
+\* Handles boot logic
+
+\* Decides animation type
+
+\* Redirects to `/desktop`
+
+
+
+---
+
+
+
+\### 2️⃣ `/desktop`
+
+
+
+Full Ubuntu GUI simulation:
+
+
+
+\* TopBar
+
+\* Dock
+
+\* Wallpaper
+
+\* Window Manager
+
+\* Context Menu
+
+
+
+---
+
+
+
+\### 3️⃣ `/terminal`
+
+
+
+Standalone full-screen terminal mode
+
+
+
+---
+
+
+
+\### 4️⃣ `/explorer/:path`
+
+
+
+File Explorer page (folder-based content)
+
+
+
+Example:
+
+
+
+```
+
+/explorer/professional-history
+
+/explorer/education
+
+/explorer/projects
+
+```
+
+
+
+---
+
+
+
+\### 5️⃣ `/section/:slug`
+
+
+
+Direct content view (SEO optimized)
+
+
+
+Example:
+
+
+
+```
+
+/section/research-publications
+
+```
+
+
+
+---
+
+
+
+\### 6️⃣ `/admin/\*`
+
+
+
+Admin control panel
+
+
+
+---
+
+
+
+\# 3. Smart Boot Animation Logic
+
+
+
+\## Requirement
+
+
+
+\### First visit within 1 hour:
+
+
+
+Show full Ubuntu boot animation.
+
+
+
+\### Reload within 1 hour:
+
+
+
+Show subtle "resume session" animation.
+
+
+
+---
+
+
+
+\## Browser Storage Strategy
+
+
+
+Use:
+
+
+
+```js
+
+localStorage.setItem("lastBootTime", timestamp)
+
+```
+
+
+
+Logic:
+
+
+
+```js
+
+const lastBoot = localStorage.getItem("lastBootTime");
+
+const now = Date.now();
+
+const oneHour = 60 \* 60 \* 1000;
+
+
+
+if (!lastBoot || now - lastBoot > oneHour) {
+
+&nbsp; showFullBootAnimation();
+
+&nbsp; localStorage.setItem("lastBootTime", now);
+
+} else {
+
+&nbsp; showResumeAnimation();
+
+}
+
+```
+
+
+
+---
+
+
+
+\# 4. Animation Behavior Design
+
+
+
+\## 4.1 First Visit (Cold Boot)
+
+
+
+Full Ubuntu-style boot:
+
+
+
+\* System logs (from Firestore)
+
+\* Loading modules
+
+\* Fade to desktop
+
+\* Dock icons animate in
+
+\* Wallpaper blur dissolve
+
+
+
+Duration: 3–5 seconds
+
+
+
+---
+
+
+
+\## 4.2 Reload Within 1 Hour (Warm Boot)
+
+
+
+Instead of boot:
+
+
+
+\* Screen briefly fades to aubergine background
+
+\* Ubuntu logo pulse
+
+\* Quick blur → restore previous session
+
+
+
+Duration: 800ms–1.2s
+
+
+
+Feels like waking from suspend.
+
+
+
+---
+
+
+
+\# 5. Desktop Reload Behavior
+
+
+
+When reloading `/desktop`:
+
+
+
+Show:
+
+
+
+\* GNOME-style screen refresh ripple
+
+&nbsp; OR
+
+\* Window restore animation (windows rehydrate from Redux persisted state)
+
+
+
+Use:
+
+Redux Persist + localStorage
+
+
+
+---
+
+
+
+\# 6. Other Page Reload Animations
+
+
+
+\## Explorer Reload
+
+
+
+\* Folder icon shake
+
+\* Breadcrumb re-render fade
+
+\* Content slide-in from bottom
+
+
+
+---
+
+
+
+\## Terminal Reload
+
+
+
+\* Terminal clears
+
+\* Replays last command header
+
+\* Cursor blink resume
+
+
+
+---
+
+
+
+\## Section Page Reload
+
+
+
+\* Soft fade in
+
+\* Section title underline animation
+
+\* Content staggered appearance
+
+
+
+---
+
+
+
+\# 7. Redux State Persistence Strategy
+
+
+
+Use:
+
+
+
+\* Redux Toolkit
+
+\* redux-persist
+
+
+
+Persist:
+
+
+
+```js
+
+{
+
+&nbsp; theme,
+
+&nbsp; openWindows,
+
+&nbsp; currentPath,
+
+&nbsp; terminalHistory
+
+}
+
+```
+
+
+
+Do NOT persist:
+
+
+
+```js
+
+{
+
+&nbsp; isBooting,
+
+&nbsp; animationState
+
+}
+
+```
+
+
+
+---
+
+
+
+\# 8. Updated Frontend Folder Structure
+
+
+
+```text
+
+src/
+
+├── app/
+
+│   ├── router.jsx
+
+│   └── store.js
+
+│
+
+├── pages/
+
+│   ├── EntryController/
+
+│   ├── Desktop/
+
+│   ├── TerminalPage/
+
+│   ├── ExplorerPage/
+
+│   ├── SectionPage/
+
+│   └── Admin/
+
+│
+
+├── features/
+
+│   ├── professionalHistory/
+
+│   ├── academicHistory/
+
+│   ├── education/
+
+│   ├── researchPublications/
+
+│   ├── projects/
+
+│   ├── skills/
+
+│   ├── honorsAwards/
+
+│   ├── certifications/
+
+│   ├── extracurricular/
+
+│   ├── references/
+
+│   ├── gallery/
+
+│   ├── contact/
+
+│   └── wordsFromMe/
+
+│
+
+├── components/
+
+│   ├── os/
+
+│   ├── terminal/
+
+│   ├── explorer/
+
+│   ├── animations/
+
+│   └── theme/
+
+│
+
+├── store/
+
+│   ├── osSlice.js
+
+│   ├── windowSlice.js
+
+│   ├── themeSlice.js
+
+│   ├── terminalSlice.js
+
+│   └── fileSystemSlice.js
+
+```
+
+
+
+Each section isolated for maintainability.
+
+
+
+---
+
+
+
+\# 9. Creative Enhancement Possibilities
+
+
+
+Before expanding further, I need clarity:
+
+
+
+1\. Do you want:
+
+
+
+&nbsp;  \* Multi-user simulation (guest vs recruiter mode)?
+
+&nbsp;  \* Auto-switch to terminal mode on mobile?
+
+&nbsp;  \* Ubuntu sound effects?
+
+&nbsp;  \* Fake system notifications (e.g., “New recruiter viewing profile”)?
+
+
+
+2\. Should `/section/:slug` look:
+
+
+
+&nbsp;  \* Like a normal website page?
+
+&nbsp;  \* Or inside Ubuntu window frame?
+
+
+
+3\. Do you want deep-linkable projects (for sharing with recruiters)?
+
+
+
+---
+
+
+
+\# 10. UX Identity After These Changes
+
+
+
+With this architecture:
+
+
+
+\* Feels like a real OS, not a gimmick.
+
+\* Behaves intelligently based on session time.
+
+\* Scales like a production SaaS app.
+
+\* Maintains animation consistency across reloads.
+
+
+
+---
+
+
+
+If you confirm your answers to the creative direction questions, next I can provide:
+
+
+
+\* Finalized routing architecture diagram
+
+\* Animation state machine design
+
+\* Redux + persist integration blueprint
+
+\* Boot controller implementation plan
+
+\* Or full phased development roadmap
+
+
+
+Tell me the next layer you want.
+
+
+
