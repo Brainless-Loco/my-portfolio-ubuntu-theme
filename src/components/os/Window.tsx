@@ -20,6 +20,7 @@ export default function Window({ window, children }: WindowProps) {
   const isFocused = focusedWindowId === window.id;
 
   const [size, setSize] = useState({ width: 900, height: 600 });
+  const [isDragging, setIsDragging] = useState(false);
 
   if (window.isMinimized) return null;
 
@@ -31,7 +32,7 @@ export default function Window({ window, children }: WindowProps) {
       animate={{ 
         opacity: 1, 
         scale: isActivitiesMode ? 0.6 : 1, 
-        zIndex: window.zIndex,
+        zIndex: window.zIndex + (isDragging ? 10000 : isFocused ? 100 : 0),
         width: window.isMaximized ? '100vw' : size.width,
         height: window.isMaximized ? 'calc(100vh - 2rem)' : size.height,
         top: window.isMaximized ? 0 : '4rem',
@@ -41,6 +42,8 @@ export default function Window({ window, children }: WindowProps) {
       }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       exit={{ opacity: 0, scale: 0.9 }}
+      onDragStart={() => setIsDragging(true)}
+      onDragEnd={() => setIsDragging(false)}
       onMouseDown={() => dispatch(focusWindow(window.id))}
       className={cn(
         "absolute pointer-events-auto flex flex-col rounded-lg overflow-hidden shadow-2xl border window-container",
@@ -57,7 +60,7 @@ export default function Window({ window, children }: WindowProps) {
     >
       <div 
         className={cn(
-          "h-10 flex items-center justify-between px-4 select-none cursor-default",
+          "h-10 flex items-center justify-between px-4 select-none cursor-move",
           isFocused ? (theme === 'dark' ? "bg-[#3d3d3d]" : "bg-gray-200") : (theme === 'dark' ? "bg-[#2d2d2d]" : "bg-gray-100")
         )}
         onDoubleClick={() => dispatch(toggleMaximize(window.id))}
@@ -66,7 +69,7 @@ export default function Window({ window, children }: WindowProps) {
           <span className={cn("text-xs font-medium", theme === 'dark' ? "text-white/90" : "text-black/90")}>{window.title}</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 relative z-50">
           <button 
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); dispatch(minimizeWindow(window.id)); }}
@@ -137,19 +140,7 @@ export default function Window({ window, children }: WindowProps) {
             }}
           />
           <div 
-            className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              const startY = e.clientY;
-              const startHeight = size.height;
-              const onMouseMove = (moveEvent: MouseEvent) => setSize(s => ({ ...s, height: Math.max(300, startHeight + (moveEvent.clientY - startY)) }));
-              const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
-              document.addEventListener('mousemove', onMouseMove);
-              document.addEventListener('mouseup', onMouseUp);
-            }}
-          />
-          <div 
-            className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize"
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize z-50"
             onMouseDown={(e) => {
               e.stopPropagation();
               const startX = e.clientX;
@@ -161,7 +152,7 @@ export default function Window({ window, children }: WindowProps) {
             }}
           />
           <div 
-            className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize"
+            className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize z-50"
             onMouseDown={(e) => {
               e.stopPropagation();
               const startY = e.clientY;

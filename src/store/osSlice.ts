@@ -7,6 +7,7 @@ interface OSState {
   wallpaper: string;
   isLocked: boolean;
   isActivitiesMode: boolean;
+  isSidebarVisible: boolean;
   volume: number;
   brightness: number;
   language: 'en' | 'bn';
@@ -20,6 +21,7 @@ const initialState: OSState = {
   wallpaper: 'https://picsum.photos/seed/ubuntu/1920/1080',
   isLocked: false,
   isActivitiesMode: false,
+  isSidebarVisible: true,
   volume: 80,
   brightness: 100,
   language: 'en',
@@ -48,6 +50,9 @@ const osSlice = createSlice({
     toggleActivitiesMode: (state) => {
       state.isActivitiesMode = !state.isActivitiesMode;
     },
+    toggleSidebar: (state) => {
+      state.isSidebarVisible = !state.isSidebarVisible;
+    },
     setVolume: (state, action: PayloadAction<number>) => {
       state.volume = action.payload;
     },
@@ -65,7 +70,7 @@ const osSlice = createSlice({
 
 export const { 
   setBootTime, setTheme, setAccentColor, setWallpaper, 
-  setLocked, toggleActivitiesMode, setVolume, 
+  setLocked, toggleActivitiesMode, toggleSidebar, setVolume, 
   setBrightness, setLanguage, setShuttingDown 
 } = osSlice.actions;
 export default osSlice.reducer;

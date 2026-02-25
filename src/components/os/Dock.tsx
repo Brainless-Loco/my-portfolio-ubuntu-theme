@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Terminal, Folder, Globe, Settings, User, Briefcase, GraduationCap, Award, Mail, LayoutGrid } from 'lucide-react';
 import { openWindow } from '../../store/windowSlice';
-import { toggleActivitiesMode } from '../../store/osSlice';
+import { toggleActivitiesMode, toggleSidebar } from '../../store/osSlice';
 import { RootState } from '../../store/store';
 import { cn } from '../../lib/utils';
 
@@ -18,23 +18,32 @@ export default function Dock() {
   const dispatch = useDispatch();
   const activeWindows = useSelector((state: RootState) => state.windows.activeWindows);
   const isActivitiesMode = useSelector((state: RootState) => state.os.isActivitiesMode);
+  const isSidebarVisible = useSelector((state: RootState) => state.os.isSidebarVisible);
+
+  const handleSidebarClick = (e: React.MouseEvent) => {
+    // Only hide sidebar if clicking directly on the background, not on app buttons
+    if (e.target === e.currentTarget) {
+      dispatch(toggleSidebar());
+    }
+  };
 
   return (
     <AnimatePresence>
-      {(isActivitiesMode || true) && (
+      {(isActivitiesMode || isSidebarVisible) && (
         <motion.div 
           initial={{ x: -100 }}
-          animate={{ x: isActivitiesMode ? 0 : -85 }}
+          animate={{ x: isActivitiesMode || isSidebarVisible ? 0 : -85 }}
           whileHover={{ x: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          onClick={handleSidebarClick}
           className={cn(
-            "fixed left-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 p-2 bg-black/40 backdrop-blur-xl rounded-r-2xl border border-white/10 z-[1000] transition-opacity duration-300 dock-container",
+            "fixed left-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 p-2 bg-black/40 backdrop-blur-xl rounded-r-2xl border border-white/10 z-[1000] transition-opacity duration-300 dock-container cursor-pointer",
             isActivitiesMode ? "scale-110 opacity-100" : "opacity-40 hover:opacity-100"
           )}
         >
           {apps.map((app) => {
             if (app.type === 'divider') {
-              return <div key={app.id} className="w-8 h-[1px] bg-white/10 my-1" />;
+              return <div key={app.id} className="w-8 h-[1px] bg-white/10 my-1 pointer-events-none" />;
             }
             const isActive = activeWindows.some(w => w.id === app.id);
             
@@ -43,7 +52,8 @@ export default function Dock() {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (app.id === 'contact') {
                       dispatch(openWindow({ id: 'contact', title: 'Contact Me', type: 'contact' }));
                     } else {

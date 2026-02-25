@@ -22,7 +22,8 @@ interface WindowsState {
 const initialState: WindowsState = {
   activeWindows: [],
   focusedWindowId: null,
-  nextZIndex: 10,
+  // start above UI overlays like the dock (z-1000) but below the topbar (z-2000)
+  nextZIndex: 1500,
 };
 
 const windowSlice = createSlice({
