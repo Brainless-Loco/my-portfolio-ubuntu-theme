@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
 import { setWallpaper, setTheme, setAccentColor, setLanguage } from '../../store/osSlice';
@@ -33,6 +33,16 @@ export default function SettingsApp() {
   const currentAccent = useSelector((state: RootState) => state.os.accentColor);
   const currentLang = useSelector((state: RootState) => state.os.language);
   const [activeTab, setActiveTab] = useState('Appearance');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -47,70 +57,90 @@ export default function SettingsApp() {
     }
   };
 
+  const tabs = ['Network', 'Appearance', 'Language', 'Notifications', 'Privacy', 'Users'];
+
   return (
-    <div className="h-full flex text-white/90 text-sm">
-      {/* Sidebar */}
-      <div className="w-56 bg-[#2d2d2d] border-r border-white/5 p-2 flex flex-col gap-1">
-        {['Network', 'Appearance', 'Language', 'Notifications', 'Privacy', 'Users'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-left",
-              activeTab === tab ? "bg-white/10" : "hover:bg-white/5"
-            )}
-          >
-            {tab === 'Appearance' && <Palette size={16} />}
-            {tab === 'Language' && <Globe size={16} />}
-            {tab === 'Notifications' && <Bell size={16} />}
-            {tab === 'Privacy' && <Shield size={16} />}
-            {tab === 'Users' && <User size={16} />}
-            {tab === 'Network' && <Monitor size={16} />}
-            <span>{tab}</span>
-          </button>
-        ))}
-      </div>
+    <div className={`h-full flex flex-col md:flex-row text-white/90 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+      {/* Sidebar / Tab Navigation */}
+      {isMobile ? (
+        <div className="bg-[#2d2d2d] border-b border-white/5 p-1 flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "px-3 py-1 rounded-md transition-colors whitespace-nowrap text-xs",
+                activeTab === tab ? "bg-white/15" : "hover:bg-white/5"
+              )}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="w-56 bg-[#2d2d2d] border-r border-white/5 p-2 flex flex-col gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-left",
+                activeTab === tab ? "bg-white/10" : "hover:bg-white/5"
+              )}
+            >
+              {tab === 'Appearance' && <Palette size={16} />}
+              {tab === 'Language' && <Globe size={16} />}
+              {tab === 'Notifications' && <Bell size={16} />}
+              {tab === 'Privacy' && <Shield size={16} />}
+              {tab === 'Users' && <User size={16} />}
+              {tab === 'Network' && <Monitor size={16} />}
+              <span>{tab}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
-      <div className={cn("flex-1 p-8 overflow-y-auto", currentTheme === 'dark' ? "bg-[#1e1e1e]" : "bg-gray-50 text-black")}>
+      <div className={cn("flex-1 overflow-y-auto", isMobile ? "p-3" : "p-8", currentTheme === 'dark' ? "bg-[#1e1e1e]" : "bg-gray-50 text-black")}>
         {activeTab === 'Appearance' && (
-          <div className="max-w-2xl space-y-8">
+          <div className={`${isMobile ? 'max-w-full space-y-4' : 'max-w-2xl space-y-8'}`}>
             <section>
-              <h3 className="text-lg font-medium mb-4">Style</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className={`font-medium mb-3 ${isMobile ? 'text-sm' : 'text-lg'}`}>Style</h3>
+              <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
                 <button 
                   onClick={() => dispatch(setTheme('light'))}
                   className={cn(
-                    "p-4 rounded-xl border-2 transition-all",
+                    "p-3 rounded-lg border-2 transition-all",
                     currentTheme === 'light' ? "border-orange-500 bg-white/5" : "border-transparent bg-black/20"
                   )}
                 >
-                  <div className="h-24 bg-gray-100 rounded-lg mb-2" />
-                  <span>Light</span>
+                  <div className={`${isMobile ? 'h-16' : 'h-24'} bg-gray-100 rounded-lg mb-2`} />
+                  <span className="text-xs md:text-sm">Light</span>
                 </button>
                 <button 
                   onClick={() => dispatch(setTheme('dark'))}
                   className={cn(
-                    "p-4 rounded-xl border-2 transition-all",
+                    "p-3 rounded-lg border-2 transition-all",
                     currentTheme === 'dark' ? "border-orange-500 bg-white/5" : "border-transparent bg-black/20"
                   )}
                 >
-                  <div className="h-24 bg-gray-800 rounded-lg mb-2" />
-                  <span>Dark</span>
+                  <div className={`${isMobile ? 'h-16' : 'h-24'} bg-gray-800 rounded-lg mb-2`} />
+                  <span className="text-xs md:text-sm">Dark</span>
                 </button>
               </div>
             </section>
 
             <section>
-              <h3 className="text-lg font-medium mb-4">Accent Color</h3>
-              <div className="flex flex-wrap gap-3">
+              <h3 className={`font-medium mb-3 ${isMobile ? 'text-sm' : 'text-lg'}`}>Accent Color</h3>
+              <div className="flex flex-wrap gap-2">
                 {accentColors.map((color) => (
                   <button
                     key={color.value}
                     onClick={() => dispatch(setAccentColor(color.value))}
                     style={{ backgroundColor: color.value }}
                     className={cn(
-                      "w-8 h-8 rounded-full border-2 transition-all",
+                      "rounded-full border-2 transition-all",
+                      isMobile ? "w-6 h-6" : "w-8 h-8",
                       currentAccent === color.value ? "border-white scale-125 shadow-lg" : "border-transparent hover:scale-110"
                     )}
                   />
@@ -119,14 +149,14 @@ export default function SettingsApp() {
             </section>
 
             <section>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium">Background</h3>
-                <label className="text-xs bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-full cursor-pointer transition-colors">
+              <div className={`flex items-center justify-between mb-3 flex-col md:flex-row gap-2`}>
+                <h3 className={`font-medium ${isMobile ? 'text-sm' : 'text-lg'}`}>Background</h3>
+                <label className={`text-xs bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-full cursor-pointer transition-colors`}>
                   Upload Image
                   <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
                 </label>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className={`grid gap-2 ${isMobile ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 {wallpapers.map((wp) => (
                   <button
                     key={wp}
@@ -145,8 +175,8 @@ export default function SettingsApp() {
         )}
 
         {activeTab === 'Language' && (
-          <div className="max-w-md space-y-6">
-            <h3 className="text-lg font-medium mb-4">Language Settings</h3>
+          <div className={`${isMobile ? 'max-w-full space-y-3' : 'max-w-md space-y-6'}`}>
+            <h3 className={`font-medium mb-3 ${isMobile ? 'text-sm' : 'text-lg'}`}>Language Settings</h3>
             <div className="space-y-2">
               {[
                 { id: 'en', label: 'English' },
@@ -156,7 +186,7 @@ export default function SettingsApp() {
                   key={lang.id}
                   onClick={() => dispatch(setLanguage(lang.id as any))}
                   className={cn(
-                    "w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all",
+                    "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-sm",
                     currentLang === lang.id ? "border-orange-500 bg-white/5" : "border-transparent bg-black/10"
                   )}
                 >
@@ -170,8 +200,8 @@ export default function SettingsApp() {
         
         {activeTab !== 'Appearance' && activeTab !== 'Language' && (
           <div className="flex flex-col items-center justify-center h-full opacity-40">
-            <Monitor size={48} className="mb-4" />
-            <p>{activeTab} settings are not implemented in this demo.</p>
+            <Monitor size={isMobile ? 32 : 48} className="mb-4" />
+            <p className="text-xs md:text-sm text-center">{activeTab} settings are not implemented in this demo.</p>
           </div>
         )}
       </div>

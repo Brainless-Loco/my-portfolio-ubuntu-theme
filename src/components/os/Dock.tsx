@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Terminal, Folder, Globe, Settings, User, Briefcase, GraduationCap, Award, Mail, LayoutGrid } from 'lucide-react';
@@ -19,6 +20,16 @@ export default function Dock() {
   const activeWindows = useSelector((state: RootState) => state.windows.activeWindows);
   const isActivitiesMode = useSelector((state: RootState) => state.os.isActivitiesMode);
   const isSidebarVisible = useSelector((state: RootState) => state.os.isSidebarVisible);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSidebarClick = (e: React.MouseEvent) => {
     // Only hide sidebar if clicking directly on the background, not on app buttons
@@ -29,21 +40,24 @@ export default function Dock() {
 
   return (
     <AnimatePresence>
-      {(isActivitiesMode || isSidebarVisible) && (
-        <motion.div 
-          initial={{ x: -100 }}
-          animate={{ x: isActivitiesMode || isSidebarVisible ? 0 : -85 }}
-          whileHover={{ x: 0 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          onClick={handleSidebarClick}
-          className={cn(
-            "fixed left-0 top-1/2 -translate-y-1/2 flex flex-col items-center gap-2 p-2 bg-black/40 backdrop-blur-xl rounded-r-2xl border border-white/10 z-[1000] transition-opacity duration-300 dock-container cursor-pointer",
-            isActivitiesMode ? "scale-110 opacity-100" : "opacity-40 hover:opacity-100"
+      <motion.div 
+        initial={isMobile ? { y: 100 } : { x: -100 }}
+        animate={isMobile ? { y: 0 } : { x: 0 }}
+        whileHover={isMobile ? {} : { x: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        onClick={handleSidebarClick}
+        className={cn(
+          "fixed flex items-center gap-2 p-2 bg-black/40 backdrop-blur-xl border border-white/10 z-[1000] transition-opacity duration-300 dock-container cursor-pointer",
+          isMobile ? (
+            "bottom-0 left-0 right-0 flex-row justify-center rounded-t-2xl opacity-90"
+          ) : (
+            "left-0 top-1/2 -translate-y-1/2 flex-col rounded-r-2xl opacity-100"
+            )
           )}
         >
           {apps.map((app) => {
             if (app.type === 'divider') {
-              return <div key={app.id} className="w-8 h-[1px] bg-white/10 my-1 pointer-events-none" />;
+              return <div key={app.id} className={cn("bg-white/10 pointer-events-none", isMobile ? "w-[1px] h-8 mx-1" : "w-8 h-[1px] my-1")} />;
             }
             const isActive = activeWindows.some(w => w.id === app.id);
             
@@ -61,12 +75,13 @@ export default function Dock() {
                     }
                   }}
                   className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all duration-200 shadow-lg",
+                    "rounded-xl flex items-center justify-center text-white transition-all duration-200 shadow-lg",
+                    isMobile ? "w-12 h-12" : "w-10 h-10",
                     app.color,
                     "hover:brightness-110"
                   )}
                 >
-                  {app.icon && <app.icon size={20} />}
+                  {app.icon && <app.icon size={isMobile ? 24 : 20} />}
                 </motion.button>
                 
                 {/* Active Indicator */}
@@ -85,7 +100,6 @@ export default function Dock() {
             );
           })}
         </motion.div>
-      )}
     </AnimatePresence>
   );
 }

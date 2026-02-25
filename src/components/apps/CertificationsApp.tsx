@@ -18,21 +18,31 @@ const certificationsData = [
 export default function CertificationsApp() {
   const theme = useSelector((state: RootState) => state.os.theme);
   const isDark = theme === 'dark';
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <Box sx={{
-      p: 3,
+      p: isMobile ? 1.5 : 3,
       bgcolor: isDark ? '#1e1e1e' : '#ffffff',
       minHeight: '100%',
     }}>
-      <Typography variant="h5" sx={{ mb: 3, color: isDark ? '#fff' : '#000' }}>
+      <Typography variant="h5" sx={{ mb: 2, color: isDark ? '#fff' : '#000', fontSize: isMobile ? '1.3rem' : '1.5rem' }}>
         Certifications
       </Typography>
 
       <Box sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-        gap: 3,
+        gridTemplateColumns: isMobile ? '1fr' : { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+        gap: isMobile ? 2 : 3,
       }}>
         {certificationsData.map((cert, index) => (
           <Card

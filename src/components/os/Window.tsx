@@ -19,14 +19,57 @@ export default function Window({ window, children }: WindowProps) {
   const theme = useSelector((state: RootState) => state.os.theme);
   const isFocused = focusedWindowId === window.id;
 
-  const [size, setSize] = useState({ width: 900, height: 600 });
+  // Detect mobile/tablet/desktop
+  const [isMobile, setIsMobile] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const width = globalThis.window.innerWidth;
+      const height = globalThis.window.innerHeight;
+      setWindowSize({ width, height });
+      setIsMobile(width < 768);
+    };
+
+    handleResize();
+    globalThis.window.addEventListener('resize', handleResize);
+    return () => globalThis.window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate responsive initial size
+  const getInitialSize = () => {
+    const screenWidth = windowSize.width;
+    const screenHeight = windowSize.height;
+
+    if (screenWidth < 480) {
+      // Mobile: full width minus padding
+      return { width: Math.max(screenWidth - 16, 320), height: Math.max(screenHeight - 80, 400) };
+    } else if (screenWidth < 768) {
+      // Small tablet
+      return { width: screenWidth - 32, height: screenHeight - 120 };
+    } else if (screenWidth < 1024) {
+      // Tablet
+      return { width: Math.min(screenWidth - 80, 700), height: screenHeight - 140 };
+    }
+    // Desktop
+    return { width: 900, height: 600 };
+  };
+
+  const initialSize = getInitialSize();
+  const [size, setSize] = useState(initialSize);
   const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Update size when screen size changes
+  React.useEffect(() => {
+    setSize(initialSize);
+  }, [windowSize.width]);
 
   if (window.isMinimized) return null;
 
   return (
     <motion.div
-      drag={!window.isMaximized && !isActivitiesMode}
+      drag={!window.isMaximized && !isActivitiesMode && !isMobile && !isResizing}
       dragMomentum={false}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ 
@@ -34,9 +77,9 @@ export default function Window({ window, children }: WindowProps) {
         scale: isActivitiesMode ? 0.6 : 1, 
         zIndex: window.zIndex + (isDragging ? 10000 : isFocused ? 100 : 0),
         width: window.isMaximized ? '100vw' : size.width,
-        height: window.isMaximized ? 'calc(100vh - 2rem)' : size.height,
-        top: window.isMaximized ? 0 : '4rem',
-        left: window.isMaximized ? 0 : '10rem',
+        height: window.isMaximized ? (isMobile ? 'calc(100vh - 3rem)' : 'calc(100vh - 2rem)') : size.height,
+        top: window.isMaximized ? 0 : isMobile ? '3rem' : '4rem',
+        left: window.isMaximized ? 0 : isMobile ? 0 : '10rem',
         x: window.isMaximized ? 0 : undefined,
         y: window.isMaximized ? 0 : undefined,
       }}
@@ -106,6 +149,7 @@ export default function Window({ window, children }: WindowProps) {
             className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-50"
             onMouseDown={(e) => {
               e.stopPropagation();
+              setIsResizing(true);
               const startX = e.clientX;
               const startY = e.clientY;
               const startWidth = size.width;
@@ -119,6 +163,7 @@ export default function Window({ window, children }: WindowProps) {
               };
 
               const onMouseUp = () => {
+                setIsResizing(false);
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
               };
@@ -128,25 +173,18 @@ export default function Window({ window, children }: WindowProps) {
             }}
           />
           <div 
-            className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              const startX = e.clientX;
-              const startWidth = size.width;
-              const onMouseMove = (moveEvent: MouseEvent) => setSize(s => ({ ...s, width: Math.max(400, startWidth + (moveEvent.clientX - startX)) }));
-              const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
-              document.addEventListener('mousemove', onMouseMove);
-              document.addEventListener('mouseup', onMouseUp);
-            }}
-          />
-          <div 
             className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize z-50"
             onMouseDown={(e) => {
               e.stopPropagation();
+              setIsResizing(true);
               const startX = e.clientX;
               const startWidth = size.width;
               const onMouseMove = (moveEvent: MouseEvent) => setSize(s => ({ ...s, width: Math.max(400, startWidth + (moveEvent.clientX - startX)) }));
-              const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
+              const onMouseUp = () => { 
+                setIsResizing(false);
+                document.removeEventListener('mousemove', onMouseMove); 
+                document.removeEventListener('mouseup', onMouseUp); 
+              };
               document.addEventListener('mousemove', onMouseMove);
               document.addEventListener('mouseup', onMouseUp);
             }}
@@ -155,10 +193,15 @@ export default function Window({ window, children }: WindowProps) {
             className="absolute bottom-0 left-0 right-0 h-1 cursor-ns-resize z-50"
             onMouseDown={(e) => {
               e.stopPropagation();
+              setIsResizing(true);
               const startY = e.clientY;
               const startHeight = size.height;
               const onMouseMove = (moveEvent: MouseEvent) => setSize(s => ({ ...s, height: Math.max(300, startHeight + (moveEvent.clientY - startY)) }));
-              const onMouseUp = () => { document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); };
+              const onMouseUp = () => { 
+                setIsResizing(false);
+                document.removeEventListener('mousemove', onMouseMove); 
+                document.removeEventListener('mouseup', onMouseUp); 
+              };
               document.addEventListener('mousemove', onMouseMove);
               document.addEventListener('mouseup', onMouseUp);
             }}

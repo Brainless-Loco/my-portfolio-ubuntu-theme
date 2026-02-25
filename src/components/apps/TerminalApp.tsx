@@ -4,6 +4,7 @@ import { closeWindow } from '../../store/windowSlice';
 
 export default function TerminalApp() {
   const dispatch = useDispatch();
+  const [isMobile, setIsMobile] = useState(false);
   const [history, setHistory] = useState<string[]>([
     'Welcome to tonmoyOS Terminal v2.4.0',
     'Type "help" to see available commands.',
@@ -11,6 +12,15 @@ export default function TerminalApp() {
   ]);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -59,14 +69,14 @@ export default function TerminalApp() {
   return (
     <div 
       ref={scrollRef}
-      className="h-full p-4 font-mono text-sm text-[#dfdbd2] overflow-y-auto"
+      className={`h-full font-mono text-[#dfdbd2] overflow-y-auto bg-black/95 ${isMobile ? 'text-xs p-2' : 'text-sm p-4'}`}
       onClick={() => document.getElementById('terminal-input')?.focus()}
     >
       {history.map((line, i) => (
-        <div key={i} className="mb-1 whitespace-pre-wrap">{line}</div>
+        <div key={i} className={`whitespace-pre-wrap ${isMobile ? 'mb-0.5' : 'mb-1'}`}>{line}</div>
       ))}
-      <form onSubmit={handleCommand} className="flex items-center">
-        <span className="text-[#87ff5f] mr-2">tonmoy@ubuntu:~$</span>
+      <form onSubmit={handleCommand} className="flex items-center gap-1">
+        <span className="text-[#87ff5f] flex-shrink-0">tonmoy@ubuntu:~$</span>
         <input
           id="terminal-input"
           type="text"

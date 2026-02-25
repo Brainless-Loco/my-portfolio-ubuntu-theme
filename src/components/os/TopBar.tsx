@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Clock, Wifi, Battery, Volume2, ChevronDown, Power, Settings, LogOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -9,10 +9,13 @@ import { cn } from '../../lib/utils';
 
 export default function TopBar() {
   const dispatch = useDispatch();
+  const headerRef = useRef<HTMLDivElement>(null);
   const [time, setTime] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSystemMenu, setShowSystemMenu] = useState(false);
   const [viewDate, setViewDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const volume = useSelector((state: RootState) => state.os.volume);
   const brightness = useSelector((state: RootState) => state.os.brightness) ?? 100;
   const isActivitiesMode = useSelector((state: RootState) => state.os.isActivitiesMode);
@@ -27,9 +30,32 @@ export default function TopBar() {
   ];
 
   useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setShowCalendar(false);
+        setShowSystemMenu(false);
+      }
+    };
+
+    if (showCalendar || showSystemMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCalendar, showSystemMenu]);
 
   const handlePowerOff = () => {
     dispatch(setShuttingDown(true));
@@ -61,6 +87,17 @@ export default function TopBar() {
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
 
+  const formatDateForComparison = (date: Date) => date.toISOString().split('T')[0];
+
+  const handleDateClick = (day: number) => {
+    const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+    setSelectedDate(newDate);
+  };
+
+  const displayDate = selectedDate || time;
+  const displayDateStr = formatDateForComparison(displayDate);
+  const filteredSchedules = schedules.filter(s => s.date === displayDateStr);
+
   return (
     <>
       {/* Brightness Overlay */}
@@ -84,28 +121,30 @@ export default function TopBar() {
         )}
       </AnimatePresence>
 
-      <header className="fixed top-0 left-0 right-0 h-8 bg-black/40 backdrop-blur-md text-white text-xs flex items-center justify-between px-4 z-[2000] border-b border-white/5">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => dispatch(toggleActivitiesMode())}
-            className={cn(
-              "font-semibold px-2 py-0.5 rounded cursor-default transition-colors",
-              isActivitiesMode ? "bg-white/20" : "hover:bg-white/10"
-            )}
-          >
-            {language === 'en' ? 'Activities' : 'কার্যক্রম'}
-          </button>
+      <header ref={headerRef} className={cn("fixed top-0 left-0 right-0 bg-black/40 backdrop-blur-md text-white flex items-center justify-between z-[2000] border-b border-white/5", isMobile ? "h-10 px-2 text-[10px]" : "h-8 px-4 text-xs")}>
+        <div className="flex items-center gap-2">
+          {/* {!isMobile && (
+            <button 
+              onClick={() => dispatch(toggleActivitiesMode())}
+              className={cn(
+                "font-semibold px-2 py-0.5 rounded cursor-default transition-colors",
+                isActivitiesMode ? "bg-white/20" : "hover:bg-white/10"
+              )}
+            >
+              {language === 'en' ? 'Activities' : 'কার্যক্রম'}
+            </button>
+          )} */}
         </div>
 
         <div className="relative">
           <button 
             onClick={() => { setShowCalendar(!showCalendar); setShowSystemMenu(false); }}
             className={cn(
-              "font-medium px-3 py-0.5 rounded cursor-default transition-colors",
+              "font-medium px-2 py-0.5 rounded cursor-default transition-colors",
               showCalendar ? "bg-white/20" : "hover:bg-white/10"
             )}
           >
-            {time.toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', { weekday: 'short', month: 'short', day: 'numeric' })} {time.toLocaleTimeString(language === 'en' ? 'en-US' : 'bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false })}
+            {isMobile ? time.toLocaleTimeString(language === 'en' ? 'en-US' : 'bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false }) : time.toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', { weekday: 'short', month: 'short', day: 'numeric' })} {(!isMobile) && time.toLocaleTimeString(language === 'en' ? 'en-US' : 'bn-BD', { hour: '2-digit', minute: '2-digit', hour12: false })}
           </button>
 
           <AnimatePresence>
@@ -114,7 +153,7 @@ export default function TopBar() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="absolute top-10 left-1/2 -translate-x-1/2 w-[500px] bg-[#2d2d2d] border border-white/10 rounded-xl shadow-2xl p-6 flex gap-6"
+                className={cn("absolute top-10 bg-[#2d2d2d] border border-white/10 rounded-xl shadow-2xl p-6 flex gap-6", isMobile ? "w-72 left-0" : "w-[500px] left-1/2 -translate-x-1/2")}
               >
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-4">
@@ -133,30 +172,43 @@ export default function TopBar() {
                     {Array.from({ length: firstDayOfMonth }).map((_, i) => (
                       <div key={`empty-${i}`} className="p-2" />
                     ))}
-                    {Array.from({ length: daysInMonth }).map((_, i) => (
-                      <div 
-                        key={i} 
-                        className={cn(
-                          "p-2 rounded-full hover:bg-white/10 transition-colors cursor-default",
-                          i + 1 === time.getDate() && viewDate.getMonth() === time.getMonth() && viewDate.getFullYear() === time.getFullYear() ? "bg-orange-600 text-white font-bold" : ""
-                        )}
-                      >
-                        {i + 1}
-                      </div>
-                    ))}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                      const isCurrentDate = i + 1 === time.getDate() && viewDate.getMonth() === time.getMonth() && viewDate.getFullYear() === time.getFullYear();
+                      const dateObj = new Date(viewDate.getFullYear(), viewDate.getMonth(), i + 1);
+                      const isSelectedDate = selectedDate && formatDateForComparison(selectedDate) === formatDateForComparison(dateObj);
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleDateClick(i + 1)}
+                          className={cn(
+                            "p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer",
+                            isCurrentDate ? "bg-orange-600 text-white font-bold" : isSelectedDate ? "bg-white/20 font-bold" : ""
+                          )}
+                        >
+                          {i + 1}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="w-48 border-l border-white/10 pl-6 space-y-4">
-                  <h4 className="text-[10px] uppercase tracking-widest opacity-50 font-bold">Schedules</h4>
+                  <div>
+                    <h4 className="text-[10px] uppercase tracking-widest opacity-50 font-bold mb-3">Schedules</h4>
+                    <p className="text-[9px] opacity-60">{displayDate.toLocaleDateString(language === 'en' ? 'en-US' : 'bn-BD', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                  </div>
                   <div className="space-y-3">
-                    {schedules.map((s, i) => (
-                      <div key={i} className="space-y-1">
-                        <div className="text-[11px] font-bold text-orange-400">{s.title}</div>
-                        <div className="text-[9px] opacity-70 line-clamp-2">{s.desc}</div>
-                        <div className="text-[8px] opacity-40">{s.time}</div>
-                      </div>
-                    ))}
+                    {filteredSchedules.length > 0 ? (
+                      filteredSchedules.map((s, i) => (
+                        <div key={i} className="space-y-1">
+                          <div className="text-[11px] font-bold text-orange-400">{s.title}</div>
+                          <div className="text-[9px] opacity-70 line-clamp-2">{s.desc}</div>
+                          <div className="text-[8px] opacity-40">{s.time}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-[9px] opacity-50 italic">{language === 'en' ? 'No schedules found' : 'কোন সময়সূচী পাওয়া যায়নি'}</div>
+                    )}
                   </div>
                 </div>
               </motion.div>

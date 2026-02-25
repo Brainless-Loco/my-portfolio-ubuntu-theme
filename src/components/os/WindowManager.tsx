@@ -1,3 +1,4 @@
+import React from 'react';
 import { useSelector } from 'react-redux';
 import { AnimatePresence } from 'motion/react';
 import { RootState } from '../../store/store';
@@ -12,8 +13,17 @@ export default function WindowManager() {
   const activeWindows = useSelector((state: RootState) => state.windows.activeWindows);
   const isActivitiesMode = useSelector((state: RootState) => state.os.isActivitiesMode);
   const accentColor = useSelector((state: RootState) => state.os.accentColor);
-
   const theme = useSelector((state: RootState) => state.os.theme);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className={cn(
@@ -27,45 +37,45 @@ export default function WindowManager() {
             {win.type === 'explorer' && <ExplorerApp />}
             {win.type === 'settings' && <SettingsApp />}
             {win.type === 'contact' && (
-              <div className={cn("p-8 h-full flex flex-col gap-8", theme === 'dark' ? "text-white" : "text-black")}>
+              <div className={cn("h-full flex flex-col gap-4 overflow-y-auto", isMobile ? "p-4" : "p-8", theme === 'dark' ? "text-white" : "text-black")}>
                 <div className="flex flex-col gap-2">
-                  <h2 className="text-3xl font-bold">Contact Me</h2>
-                  <p className="opacity-60">Feel free to reach out for collaborations or just a friendly hello!</p>
+                  <h2 className={isMobile ? "text-2xl font-bold" : "text-3xl font-bold"}>Contact Me</h2>
+                  <p className="opacity-60 text-sm">Feel free to reach out for collaborations or just a friendly hello!</p>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1">
-                  <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 flex-1">
+                  <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
                     <div className="space-y-1">
                       <label className="text-xs opacity-60">Name</label>
-                      <input type="text" className={cn("w-full p-2 rounded-lg border outline-none transition-all", theme === 'dark' ? "bg-white/5 border-white/10 focus:border-orange-500" : "bg-black/5 border-black/10 focus:border-orange-500")} placeholder="John Doe" />
+                      <input type="text" className={cn("w-full p-2 rounded-lg border outline-none transition-all text-sm", theme === 'dark' ? "bg-white/5 border-white/10 focus:border-orange-500" : "bg-black/5 border-black/10 focus:border-orange-500")} placeholder="John Doe" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs opacity-60">Email</label>
-                      <input type="email" className={cn("w-full p-2 rounded-lg border outline-none transition-all", theme === 'dark' ? "bg-white/5 border-white/10 focus:border-orange-500" : "bg-black/5 border-black/10 focus:border-orange-500")} placeholder="john@example.com" />
+                      <input type="email" className={cn("w-full p-2 rounded-lg border outline-none transition-all text-sm", theme === 'dark' ? "bg-white/5 border-white/10 focus:border-orange-500" : "bg-black/5 border-black/10 focus:border-orange-500")} placeholder="john@example.com" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs opacity-60">Message</label>
-                      <textarea rows={4} className={cn("w-full p-2 rounded-lg border outline-none transition-all resize-none", theme === 'dark' ? "bg-white/5 border-white/10 focus:border-orange-500" : "bg-black/5 border-black/10 focus:border-orange-500")} placeholder="Your message here..." />
+                      <textarea rows={isMobile ? 3 : 4} className={cn("w-full p-2 rounded-lg border outline-none transition-all resize-none text-sm", theme === 'dark' ? "bg-white/5 border-white/10 focus:border-orange-500" : "bg-black/5 border-black/10 focus:border-orange-500")} placeholder="Your message here..." />
                     </div>
-                    <button className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors">
+                    <button className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors text-sm">
                       Send Message
                     </button>
                   </form>
 
-                  <div className="space-y-6">
-                    <h4 className="font-bold">Connect Elsewhere</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <a href="https://github.com" target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-3 p-4 rounded-xl border transition-all hover:scale-105", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5")}>
-                        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-                          <Globe size={20} className="text-white" />
+                  <div className="space-y-4">
+                    <h4 className="font-bold text-sm">Connect Elsewhere</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <a href="https://github.com" target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2 p-3 rounded-lg border transition-all hover:scale-105 text-xs", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5")}>
+                        <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Globe size={16} className="text-white" />
                         </div>
-                        <span className="font-medium">GitHub</span>
+                        <span className="font-medium hidden sm:block">GitHub</span>
                       </a>
-                      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-3 p-4 rounded-xl border transition-all hover:scale-105", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5")}>
-                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                          <Globe size={20} className="text-white" />
+                      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className={cn("flex items-center gap-2 p-3 rounded-lg border transition-all hover:scale-105 text-xs", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5")}>
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Globe size={16} className="text-white" />
                         </div>
-                        <span className="font-medium">LinkedIn</span>
+                        <span className="font-medium hidden sm:block">LinkedIn</span>
                       </a>
                     </div>
                   </div>

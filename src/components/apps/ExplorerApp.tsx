@@ -40,8 +40,27 @@ const secondaryItems = [
 
 export default function ExplorerApp() {
   const [activeTab, setActiveTab] = useState('home');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const theme = useSelector((state: RootState) => state.os.theme);
   const isDark = theme === 'dark';
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Auto close sidebar on mobile when item is selected
+  const handleItemClick = (id: string) => {
+    setActiveTab(id);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -92,91 +111,126 @@ export default function ExplorerApp() {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100%' }}>
-      {/* Sidebar */}
-      <Paper
-        sx={{
-          width: 240,
-          flexShrink: 0,
+    <Box sx={{ display: 'flex', height: '100%', flexDirection: isMobile ? 'column' : 'row' }}>
+      {/* Mobile Toggle Button */}
+      {isMobile && (
+        <Box sx={{ 
+          p: 1, 
           bgcolor: isDark ? '#2d2d2d' : '#fafafa',
-          borderRight: `1px solid ${isDark ? '#444' : '#e0e0e0'}`,
+          borderBottom: `1px solid ${isDark ? '#444' : '#e0e0e0'}`,
           display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-        }}
-      >
-        <List sx={{ flex: 1, p: 1 }}>
-          {navItems.map((item) => (
-            <ListItem
-              key={item.id}
-              disablePadding
-              sx={{
-                mb: 0.5,
-              }}
-            >
-              <Button
-                fullWidth
-                onClick={() => setActiveTab(item.id)}
+          alignItems: 'center',
+          gap: 1,
+        }}>
+          <Button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            size="small"
+            sx={{
+              minWidth: 'auto',
+              color: '#ff9800',
+              bgcolor: isDark ? 'rgba(255, 152, 0, 0.1)' : 'rgba(255, 152, 0, 0.1)',
+            }}
+          >
+            {sidebarOpen ? '✕ Hide' : '☰ Menu'}
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <span style={{ fontSize: '0.85rem', opacity: 0.6, color: isDark ? '#fff' : '#000' }}>
+            {navItems.find(i => i.id === activeTab)?.label || 'Home'}
+          </span>
+        </Box>
+      )}
+
+      {/* Sidebar */}
+      {(!isMobile || sidebarOpen) && (
+        <Paper
+          sx={{
+            width: isMobile ? '100%' : 240,
+            flexShrink: 0,
+            bgcolor: isDark ? '#2d2d2d' : '#fafafa',
+            borderRight: isMobile ? 'none' : `1px solid ${isDark ? '#444' : '#e0e0e0'}`,
+            borderBottom: isMobile ? `1px solid ${isDark ? '#444' : '#e0e0e0'}` : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: 'auto',
+            maxHeight: isMobile ? '200px' : 'auto',
+          }}
+        >
+          <List sx={{ flex: 1, p: 1 }}>
+            {navItems.map((item) => (
+              <ListItem
+                key={item.id}
+                disablePadding
                 sx={{
-                  justifyContent: 'flex-start',
-                  textTransform: 'none',
-                  fontSize: '0.95rem',
-                  color: isDark ? '#fff' : '#000',
-                  bgcolor: activeTab === item.id ? (isDark ? '#444' : '#e0e0e0') : 'transparent',
-                  '&:hover': {
-                    bgcolor: isDark ? '#383838' : '#f0f0f0',
-                  },
+                  mb: 0.5,
                 }}
               >
-                <item.icon
+                <Button
+                  fullWidth
+                  onClick={() => handleItemClick(item.id)}
                   sx={{
-                    mr: 2,
-                    color: activeTab === item.id ? '#ff9800' : (isDark ? '#bbb' : '#666'),
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    fontSize: isMobile ? '0.9rem' : '0.95rem',
+                    color: isDark ? '#fff' : '#000',
+                    bgcolor: activeTab === item.id ? (isDark ? '#444' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      bgcolor: isDark ? '#383838' : '#f0f0f0',
+                    },
                   }}
-                />
-                {item.label}
-              </Button>
-            </ListItem>
-          ))}
-        </List>
+                >
+                  <item.icon
+                    sx={{
+                      mr: isMobile ? 1 : 2,
+                      fontSize: isMobile ? '1.2rem' : '1.5rem',
+                      color: activeTab === item.id ? '#ff9800' : (isDark ? '#bbb' : '#666'),
+                    }}
+                  />
+                  {!isMobile && item.label}
+                </Button>
+              </ListItem>
+            ))}
+          </List>
 
-        <Divider sx={{ bgcolor: isDark ? '#444' : '#e0e0e0' }} />
+          {!isMobile && <Divider sx={{ bgcolor: isDark ? '#444' : '#e0e0e0' }} />}
 
-        <List sx={{ p: 1 }}>
-          {secondaryItems.map((item) => (
-            <ListItem
-              key={item.id}
-              disablePadding
-              sx={{
-                mb: 0.5,
-              }}
-            >
-              <Button
-                fullWidth
-                onClick={() => setActiveTab(item.id)}
-                sx={{
-                  justifyContent: 'flex-start',
-                  textTransform: 'none',
-                  fontSize: '0.95rem',
-                  color: isDark ? '#fff' : '#000',
-                  bgcolor: activeTab === item.id ? (isDark ? '#444' : '#e0e0e0') : 'transparent',
-                  '&:hover': {
-                    bgcolor: isDark ? '#383838' : '#f0f0f0',
-                  },
-                }}
-              >
-                <item.icon
+          {!isMobile && (
+            <List sx={{ p: 1 }}>
+              {secondaryItems.map((item) => (
+                <ListItem
+                  key={item.id}
+                  disablePadding
                   sx={{
-                    mr: 2,
-                    color: activeTab === item.id ? '#ff9800' : (isDark ? '#bbb' : '#666'),
+                    mb: 0.5,
                   }}
-                />
-                {item.label}
-              </Button>
-            </ListItem>
-          ))}
-        </List>
-      </Paper>
+                >
+                  <Button
+                    fullWidth
+                    onClick={() => handleItemClick(item.id)}
+                    sx={{
+                      justifyContent: 'flex-start',
+                      textTransform: 'none',
+                      fontSize: '0.95rem',
+                      color: isDark ? '#fff' : '#000',
+                      bgcolor: activeTab === item.id ? (isDark ? '#444' : '#e0e0e0') : 'transparent',
+                      '&:hover': {
+                        bgcolor: isDark ? '#383838' : '#f0f0f0',
+                      },
+                    }}
+                  >
+                    <item.icon
+                      sx={{
+                        mr: 2,
+                        color: activeTab === item.id ? '#ff9800' : (isDark ? '#bbb' : '#666'),
+                      }}
+                    />
+                    {item.label}
+                  </Button>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Paper>
+      )}
 
       {/* Main Content */}
       <Box
@@ -184,6 +238,7 @@ export default function ExplorerApp() {
           flex: 1,
           overflow: 'auto',
           bgcolor: isDark ? '#1e1e1e' : '#ffffff',
+          minHeight: isMobile ? 'calc(100vh - 200px)' : '100%',
         }}
       >
         {renderContent()}
