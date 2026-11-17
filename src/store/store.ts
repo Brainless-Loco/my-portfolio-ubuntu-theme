@@ -3,6 +3,7 @@ import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, 
 import storage from 'redux-persist/lib/storage';
 import osReducer from './osSlice';
 import windowReducer from './windowSlice';
+import portfolioReducer from './portfolioSlice';
 
 const osPersistConfig = {
   key: 'os',
@@ -13,13 +14,14 @@ const osPersistConfig = {
 const rootReducer = combineReducers({
   os: persistReducer(osPersistConfig, osReducer),
   windows: windowReducer,
+  portfolio: portfolioReducer,
 });
 
 const persistConfig = {
   key: 'tonmoy-os-root',
   version: 1,
   storage,
-  whitelist: ['windows'], // 'os' is now handled separately
+  whitelist: ['windows', 'portfolio'], // 'os' is now handled separately
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

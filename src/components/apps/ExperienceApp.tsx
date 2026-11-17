@@ -1,96 +1,45 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store/store';
-import { Card, CardContent, CardMedia, Typography, Box, Chip } from '@mui/material';
-import { FolderOpen as FolderIcon } from '@mui/icons-material';
-
-const experienceData = [
-  { name: 'Professional', items: 5, color: '#ff9800' },
-  { name: 'Academic', items: 3, color: '#2196f3' },
-];
+import { Box, Button } from '@mui/material';
+import PortfolioSectionApp from './PortfolioSectionApp';
 
 export default function ExperienceApp() {
-  const theme = useSelector((state: RootState) => state.os.theme);
+  const { theme, accentColor } = useSelector((state: RootState) => state.os);
+  const [activeTab, setActiveTab] = React.useState<'professionalExperience' | 'academicExperience'>('professionalExperience');
   const isDark = theme === 'dark';
-  const [isMobile, setIsMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   return (
-    <Box sx={{
-      p: isMobile ? 1.5 : 3,
-      bgcolor: isDark ? '#1e1e1e' : '#ffffff',
-      minHeight: '100%',
-    }}>
-      <Typography variant="h5" sx={{ mb: 2, color: isDark ? '#fff' : '#000', fontSize: isMobile ? '1.3rem' : '1.5rem' }}>
-        My Experience
-      </Typography>
-      
-      <Box sx={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-        gap: isMobile ? 2 : 3,
-      }}>
-        {experienceData.map((item) => (
-          <Card
-            key={item.name}
+    <Box sx={{ height: '100%', overflowY: 'auto', bgcolor: isDark ? '#1e1e1e' : '#fff' }}>
+      <Box sx={{ display: 'inline-flex', gap: 0.5, mx: { xs: 2, sm: 3 }, mt: 2, p: 0.5, borderRadius: 2, bgcolor: isDark ? '#303030' : '#f0f0f0' }} role="tablist" aria-label="Experience type">
+        {([
+          { id: 'professionalExperience', label: 'Professional' },
+          { id: 'academicExperience', label: 'Academic' },
+        ] as const).map((tab) => (
+          <Button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            size="small"
+            onClick={() => setActiveTab(tab.id)}
             sx={{
-              height: '100%',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              bgcolor: isDark ? '#2d2d2d' : '#f5f5f5',
-              border: `1px solid ${isDark ? '#444' : '#e0e0e0'}`,
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: `0 8px 16px rgba(255, 152, 0, 0.3)`,
-                bgcolor: isDark ? '#333' : '#fafafa',
-              },
+              minWidth: { xs: 128, sm: 150 },
+              borderRadius: 1.5,
+              px: 2,
+              py: 0.75,
+              textTransform: 'none',
+              fontWeight: 600,
+              color: activeTab === tab.id ? '#fff' : isDark ? '#bbb' : '#555',
+              bgcolor: activeTab === tab.id ? accentColor : 'transparent',
+              boxShadow: activeTab === tab.id ? 1 : 'none',
+              '&:hover': { bgcolor: activeTab === tab.id ? accentColor : isDark ? '#3b3b3b' : '#e5e5e5' },
             }}
           >
-            <CardMedia
-              sx={{
-                height: 120,
-                bgcolor: item.color,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0.2,
-              }}
-            >
-              <FolderIcon sx={{ fontSize: 48, color: item.color }} />
-            </CardMedia>
-            <CardContent>
-              <Typography
-                variant="h6"
-                sx={{
-                  color: isDark ? '#fff' : '#000',
-                  fontWeight: 600,
-                  mb: 1,
-                }}
-              >
-                {item.name}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Chip
-                  label={`${item.items} items`}
-                  size="small"
-                  sx={{
-                    bgcolor: item.color,
-                    color: '#fff',
-                  }}
-                />
-              </Box>
-            </CardContent>
-          </Card>
+            {tab.label}
+          </Button>
         ))}
       </Box>
+      <PortfolioSectionApp sectionId="experience" experienceKey={activeTab} />
     </Box>
   );
 }

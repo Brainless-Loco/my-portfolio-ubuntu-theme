@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { RootState } from '../../store/store';
 import {
   Box,
@@ -18,19 +19,34 @@ import {
   AccessTime as RecentIcon,
   Star as StarIcon,
   Delete as TrashIcon,
+  EmojiEvents as HonorsIcon,
+  Language as LanguageIcon,
+  MenuBook as PublicationsIcon,
+  Psychology as SkillsIcon,
+  Groups as ActivitiesIcon,
+  History as NewsIcon,
 } from '@mui/icons-material';
+import PortfolioSectionApp from './PortfolioSectionApp';
+import { sanitizeRichText } from '../../lib/richText';
+import { PortfolioSectionId } from '../../store/portfolioSlice';
 import ProjectsApp from './ProjectsApp';
 import GalleryApp from './GalleryApp';
 import CertificationsApp from './CertificationsApp';
 import ExperienceApp from './ExperienceApp';
 
-const navItems = [
-  { id: 'home', label: 'Home', icon: HomeIcon },
-  { id: 'experience', label: 'Experience', icon: ExperienceIcon },
-  { id: 'projects', label: 'Projects', icon: FolderIcon },
-  { id: 'certifications', label: 'Certifications', icon: CertIcon },
-  { id: 'gallery', label: 'Gallery', icon: GalleryIcon },
-];
+const sectionIcons = {
+  experience: ExperienceIcon,
+  projects: FolderIcon,
+  certifications: CertIcon,
+  gallery: GalleryIcon,
+  skills: SkillsIcon,
+  english: LanguageIcon,
+  education: CertIcon,
+  honors: HonorsIcon,
+  activities: ActivitiesIcon,
+  publications: PublicationsIcon,
+  news: NewsIcon,
+};
 
 const secondaryItems = [
   { id: 'recent', label: 'Recent', icon: RecentIcon },
@@ -39,10 +55,21 @@ const secondaryItems = [
 ];
 
 export default function ExplorerApp() {
-  const [activeTab, setActiveTab] = useState('home');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeSegment = location.pathname.slice(1);
+  const activeTab = routeSegment === 'desktop' ? 'home' : routeSegment || 'home';
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const theme = useSelector((state: RootState) => state.os.theme);
+  const portfolio = useSelector((state: RootState) => state.portfolio);
   const isDark = theme === 'dark';
+  const navItems = [
+    { id: 'home', label: 'Home', icon: HomeIcon },
+    ...[...portfolio.sections]
+      .filter((section) => section.visible)
+      .sort((a, b) => a.serial - b.serial)
+      .map((section) => ({ id: section.id, label: section.title, icon: sectionIcons[section.id] })),
+  ];
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
@@ -56,7 +83,7 @@ export default function ExplorerApp() {
 
   // Auto close sidebar on mobile when item is selected
   const handleItemClick = (id: string) => {
-    setActiveTab(id);
+    navigate(`/${id}`);
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -72,16 +99,20 @@ export default function ExplorerApp() {
         return <CertificationsApp />;
       case 'experience':
         return <ExperienceApp />;
+      case 'news':
+        return <PortfolioSectionApp sectionId="news" />;
+      case 'skills':
+      case 'english':
+      case 'education':
+      case 'honors':
+      case 'activities':
+      case 'publications':
+        return <PortfolioSectionApp sectionId={activeTab as PortfolioSectionId} />;
       case 'home':
         return (
           <Box sx={{ p: 3, bgcolor: isDark ? '#1e1e1e' : '#ffffff', minHeight: '100%' }}>
-            <Box sx={{ maxWidth: 600 }}>
-              <h1 style={{ color: isDark ? '#fff' : '#000', marginBottom: '16px' }}>Welcome</h1>
-              <p style={{ color: isDark ? '#bbb' : '#666', lineHeight: 1.6 }}>
-                Explore my portfolio, projects, experience, and certifications. Navigate through the sections
-                using the sidebar menu to learn more about my professional journey and skills.
-              </p>
-            </Box>
+            <Box sx={{ maxWidth: 800, color: isDark ? '#ddd' : '#444', '& a': { color: '#ff9800' }, '& ul, & ol': { pl: 3 } }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(portfolio.homeRichText) }} />
           </Box>
         );
       case 'recent':
@@ -144,7 +175,7 @@ export default function ExplorerApp() {
       {(!isMobile || sidebarOpen) && (
         <Paper
           sx={{
-            width: isMobile ? '100%' : 240,
+            width: isMobile ? '100%' : 280,
             flexShrink: 0,
             bgcolor: isDark ? '#2d2d2d' : '#fafafa',
             borderRight: isMobile ? 'none' : `1px solid ${isDark ? '#444' : '#e0e0e0'}`,
@@ -185,7 +216,7 @@ export default function ExplorerApp() {
                       color: activeTab === item.id ? '#ff9800' : (isDark ? '#bbb' : '#666'),
                     }}
                   />
-                  {!isMobile && item.label}
+                  {item.label}
                 </Button>
               </ListItem>
             ))}
@@ -240,6 +271,7 @@ export default function ExplorerApp() {
           bgcolor: isDark ? '#1e1e1e' : '#ffffff',
           minHeight: isMobile ? 'calc(100vh - 200px)' : '100%',
         }}
+        className="custom-scrollbar"
       >
         {renderContent()}
       </Box>

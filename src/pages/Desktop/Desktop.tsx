@@ -13,24 +13,12 @@ export default function Desktop() {
   const dispatch = useDispatch();
   const wallpaper = useSelector((state: RootState) => state.os.wallpaper);
   const isLocked = useSelector((state: RootState) => state.os.isLocked);
-  const activeWindows = useSelector((state: RootState) => state.windows.activeWindows);
-  const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  React.useEffect(() => {
-    // Open explorer window by default if no windows are open
-    if (activeWindows.length === 0 && !isLocked) {
+    if (!isLocked) {
       dispatch(openWindow({ id: 'explorer', title: 'Home', type: 'explorer' }));
     }
-  }, []);
+  }, [dispatch, isLocked]);
 
   return (
     <div 
@@ -46,7 +34,7 @@ export default function Desktop() {
       {/* OS UI Layers */}
       <TopBar />
       
-      <main className={isMobile ? "absolute inset-0 pt-10 pb-20" : "absolute inset-0 pt-8"}>
+      <main className="absolute inset-0">
         <WindowManager />
       </main>
 

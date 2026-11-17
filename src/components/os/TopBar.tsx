@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Clock, Wifi, Battery, Volume2, ChevronDown, Power, Settings, LogOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { RootState } from '../../store/store';
 import { toggleActivitiesMode, setVolume, setBrightness, setShuttingDown, setLocked } from '../../store/osSlice';
 import { openWindow } from '../../store/windowSlice';
@@ -9,6 +10,7 @@ import { cn } from '../../lib/utils';
 
 export default function TopBar() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const headerRef = useRef<HTMLDivElement>(null);
   const [time, setTime] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
@@ -22,12 +24,7 @@ export default function TopBar() {
   const language = useSelector((state: RootState) => state.os.language);
   const isShuttingDown = useSelector((state: RootState) => state.os.isShuttingDown);
   const accentColor = useSelector((state: RootState) => state.os.accentColor);
-
-  const schedules = [
-    { title: 'Project Review', desc: 'Review the latest UI changes', date: '2026-02-23', time: '10:00 AM' },
-    { title: 'Client Meeting', desc: 'Discuss portfolio expansion', date: '2026-02-23', time: '02:00 PM' },
-    { title: 'Code Refactor', desc: 'Optimize window manager', date: '2026-02-24', time: '09:00 AM' },
-  ];
+  const schedules = useSelector((state: RootState) => state.portfolio.schedules ?? []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -87,7 +84,11 @@ export default function TopBar() {
   const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
 
-  const formatDateForComparison = (date: Date) => date.toISOString().split('T')[0];
+  const formatDateForComparison = (date: Date) => {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+  };
 
   const handleDateClick = (day: number) => {
     const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
@@ -96,7 +97,9 @@ export default function TopBar() {
 
   const displayDate = selectedDate || time;
   const displayDateStr = formatDateForComparison(displayDate);
-  const filteredSchedules = schedules.filter(s => s.date === displayDateStr);
+  const filteredSchedules = schedules
+    .filter((schedule) => schedule.date === displayDateStr)
+    .sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <>
@@ -199,17 +202,24 @@ export default function TopBar() {
                   </div>
                   <div className="space-y-3">
                     {filteredSchedules.length > 0 ? (
-                      filteredSchedules.map((s, i) => (
-                        <div key={i} className="space-y-1">
-                          <div className="text-[11px] font-bold text-orange-400">{s.title}</div>
-                          <div className="text-[9px] opacity-70 line-clamp-2">{s.desc}</div>
-                          <div className="text-[8px] opacity-40">{s.time}</div>
+                      filteredSchedules.map((schedule) => (
+                        <div key={schedule.id} className="space-y-1">
+                          <div className="text-[11px] font-bold text-orange-400">{schedule.title}</div>
+                          <div className="text-[9px] opacity-70 line-clamp-2">{schedule.description}</div>
+                          <div className="text-[8px] opacity-40">{schedule.time}</div>
                         </div>
                       ))
                     ) : (
                       <div className="text-[9px] opacity-50 italic">{language === 'en' ? 'No schedules found' : 'কোন সময়সূচী পাওয়া যায়নি'}</div>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => { navigate('/admin#schedules'); setShowCalendar(false); }}
+                    className="text-[9px] font-medium text-orange-300 hover:text-orange-200"
+                  >
+                    Manage schedules
+                  </button>
                 </div>
               </motion.div>
             )}

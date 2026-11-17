@@ -8,6 +8,12 @@ import Window from './Window';
 import TerminalApp from '../apps/TerminalApp';
 import ExplorerApp from '../apps/ExplorerApp';
 import SettingsApp from '../apps/SettingsApp';
+import ExperienceApp from '../apps/ExperienceApp';
+import ProjectsApp from '../apps/ProjectsApp';
+import GalleryApp from '../apps/GalleryApp';
+import CertificationsApp from '../apps/CertificationsApp';
+import PortfolioSectionApp from '../apps/PortfolioSectionApp';
+import { PortfolioSectionId } from '../../store/portfolioSlice';
 
 export default function WindowManager() {
   const activeWindows = useSelector((state: RootState) => state.windows.activeWindows);
@@ -83,26 +89,11 @@ export default function WindowManager() {
               </div>
             )}
             {win.type === 'section' && (
-              <div className={cn("p-8 h-full", theme === 'dark' ? "text-white" : "text-black")}>
-                <h2 className="text-3xl font-bold mb-6 flex items-center gap-4">
-                  <div className="w-2 h-8 rounded-full" style={{ backgroundColor: accentColor }} />
-                  {win.title}
-                </h2>
-                <div className="space-y-6 opacity-80">
-                  <p className="text-lg leading-relaxed">
-                    This is the {win.title} section of Tonmoy's portfolio. 
-                    Detailed information about {win.title.toLowerCase()} will be displayed here.
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className={cn("p-4 rounded-xl border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-black/5 border-black/5")}>
-                        <h4 className="font-bold mb-2">Sample Item {i}</h4>
-                        <p className="text-xs opacity-60">Description for sample item {i} in {win.title}.</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              win.id === 'experience' ? <ExperienceApp /> :
+              win.id === 'projects' ? <ProjectsApp /> :
+              win.id === 'gallery' ? <GalleryApp /> :
+              win.id === 'certifications' ? <CertificationsApp /> :
+              <PortfolioSectionApp sectionId={win.id as PortfolioSectionId} />
             )}
           </Window>
         ))}
