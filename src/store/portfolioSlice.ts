@@ -73,7 +73,7 @@ export const initialPortfolioState: PortfolioState = {
     { id: 'honors', title: 'Honors and Awards', visible: true, serial: 8 },
     { id: 'activities', title: 'Extra Curricular Activities', visible: true, serial: 9 },
     { id: 'publications', title: 'Publications', visible: true, serial: 10 },
-    { id: 'news', title: 'Recent Activity', visible: true, serial: 11 },
+    { id: 'news', title: 'Recent Activities', visible: true, serial: 11 },
   ],
   professionalExperience: [],
   academicExperience: [],

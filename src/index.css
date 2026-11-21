@@ -106,6 +106,16 @@
     padding-left: 1.5rem;
   }
 
+  .portfolio-rich-text ul {
+    list-style-type: square;
+    padding-left: 1.5rem;
+  }
+
+  .portfolio-rich-text ol {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+  }
+
   .rich-text-prose blockquote {
     border-left: 3px solid #f97316;
     padding-left: 0.75rem;

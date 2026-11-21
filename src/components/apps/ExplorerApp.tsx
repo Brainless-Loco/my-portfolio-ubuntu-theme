@@ -16,7 +16,6 @@ import {
   Image as GalleryIcon,
   School as CertIcon,
   Work as ExperienceIcon,
-  AccessTime as RecentIcon,
   Star as StarIcon,
   Delete as TrashIcon,
   EmojiEvents as HonorsIcon,
@@ -49,7 +48,7 @@ const sectionIcons = {
 };
 
 const secondaryItems = [
-  { id: 'recent', label: 'Recent', icon: RecentIcon },
+  { id: 'news', label: 'Recent Activities', icon: NewsIcon },
   { id: 'starred', label: 'Starred', icon: StarIcon },
   { id: 'trash', label: 'Trash', icon: TrashIcon },
 ];
@@ -58,7 +57,7 @@ export default function ExplorerApp() {
   const location = useLocation();
   const navigate = useNavigate();
   const routeSegment = location.pathname.slice(1);
-  const activeTab = routeSegment === 'desktop' ? 'home' : routeSegment || 'home';
+  const activeTab = routeSegment === 'desktop' ? 'home' : routeSegment === 'recent' ? 'news' : routeSegment || 'home';
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const theme = useSelector((state: RootState) => state.os.theme);
   const portfolio = useSelector((state: RootState) => state.portfolio);
@@ -66,7 +65,7 @@ export default function ExplorerApp() {
   const navItems = [
     { id: 'home', label: 'Home', icon: HomeIcon },
     ...[...portfolio.sections]
-      .filter((section) => section.visible)
+      .filter((section) => section.visible && section.id !== 'news')
       .sort((a, b) => a.serial - b.serial)
       .map((section) => ({ id: section.id, label: section.title, icon: sectionIcons[section.id] })),
   ];
@@ -99,6 +98,7 @@ export default function ExplorerApp() {
         return <CertificationsApp />;
       case 'experience':
         return <ExperienceApp />;
+      case 'recent':
       case 'news':
         return <PortfolioSectionApp sectionId="news" />;
       case 'skills':
@@ -111,15 +111,8 @@ export default function ExplorerApp() {
       case 'home':
         return (
           <Box sx={{ p: 3, bgcolor: isDark ? '#1e1e1e' : '#ffffff', minHeight: '100%' }}>
-            <Box sx={{ maxWidth: 800, color: isDark ? '#ddd' : '#444', '& a': { color: '#ff9800' }, '& ul, & ol': { pl: 3 } }}
+            <Box className="portfolio-rich-text" sx={{ maxWidth: 800, color: isDark ? '#ddd' : '#444', '& a': { color: '#ff9800' }, '& ul, & ol': { pl: 3 } }}
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(portfolio.homeRichText) }} />
-          </Box>
-        );
-      case 'recent':
-        return (
-          <Box sx={{ p: 3, bgcolor: isDark ? '#1e1e1e' : '#ffffff', minHeight: '100%' }}>
-            <h2 style={{ color: isDark ? '#fff' : '#000' }}>Recent Items</h2>
-            <p style={{ color: isDark ? '#bbb' : '#666' }}>You haven't viewed any items recently.</p>
           </Box>
         );
       case 'starred':
@@ -166,7 +159,7 @@ export default function ExplorerApp() {
           </Button>
           <Box sx={{ flex: 1 }} />
           <span style={{ fontSize: '0.85rem', opacity: 0.6, color: isDark ? '#fff' : '#000' }}>
-            {navItems.find(i => i.id === activeTab)?.label || 'Home'}
+            {[...navItems, ...secondaryItems].find((item) => item.id === activeTab)?.label || 'Home'}
           </span>
         </Box>
       )}

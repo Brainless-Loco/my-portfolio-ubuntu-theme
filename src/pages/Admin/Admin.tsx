@@ -24,13 +24,13 @@ const editorOptions: EditorOption[] = [
     { key: 'role', label: 'Role' }, { key: 'workplaceName', label: 'Workplace name' },
     { key: 'workplaceAddress', label: 'Workplace address' }, { key: 'workplaceWeb', label: 'Workplace website', kind: 'url' },
     { key: 'startDate', label: 'Start date' }, { key: 'endDate', label: 'End date (use Present if current)' },
-    { key: 'responsibilities', label: 'Responsibilities', kind: 'list' }, { key: 'description', label: 'Description', kind: 'rich' },
+    { key: 'tags', label: 'Tags', kind: 'list' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'academicExperience', label: 'Academic experience', key: 'academicExperience', fields: [
     { key: 'role', label: 'Role' }, { key: 'workplaceName', label: 'Workplace name' },
     { key: 'workplaceAddress', label: 'Workplace address' }, { key: 'workplaceWeb', label: 'Workplace website', kind: 'url' },
     { key: 'startDate', label: 'Start date' }, { key: 'endDate', label: 'End date (use Present if current)' },
-    { key: 'responsibilities', label: 'Responsibilities', kind: 'list' }, { key: 'description', label: 'Description', kind: 'rich' },
+    { key: 'tags', label: 'Tags', kind: 'list' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'projects', label: 'Projects', key: 'projects', fields: [
     { key: 'title', label: 'Title' }, { key: 'projectTime', label: 'Project time' },
@@ -53,7 +53,8 @@ const editorOptions: EditorOption[] = [
     { key: 'test', label: 'Test / assessment' }, { key: 'date', label: 'Date' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'education', label: 'Education', key: 'education', fields: [
-    { key: 'degree', label: 'Degree' }, { key: 'institution', label: 'Institution' }, { key: 'location', label: 'Location' },
+    { key: 'degree', label: 'Degree' }, { key: 'subject', label: 'Subject / Department' },
+    { key: 'institution', label: 'Institution' }, { key: 'location', label: 'Location' },
     { key: 'startDate', label: 'Start date' }, { key: 'endDate', label: 'End date' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'honors', label: 'Honors and awards', key: 'honors', fields: [
@@ -68,7 +69,7 @@ const editorOptions: EditorOption[] = [
     { key: 'title', label: 'Title' }, { key: 'author', label: 'Author(s)' }, { key: 'publication', label: 'Journal / publisher' },
     { key: 'date', label: 'Date' }, { key: 'url', label: 'Publication link', kind: 'url' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
-  { id: 'news', label: 'Recent activity', key: 'news', fields: [
+  { id: 'news', label: 'Recent activities', key: 'news', fields: [
     { key: 'title', label: 'Title' }, { key: 'date', label: 'Date' }, { key: 'url', label: 'Related link', kind: 'url' },
     { key: 'description', label: 'Description', kind: 'rich' },
   ] },
@@ -153,9 +154,12 @@ export default function Admin() {
     if (!selectedId) return;
     updateDraft((current) => ({
       ...current,
-      [editor.key]: (current[editor.key] as PortfolioEntry[]).map((entry) =>
-        entry.id === selectedId ? { ...entry, [key]: value } : entry,
-      ),
+      [editor.key]: (current[editor.key] as PortfolioEntry[]).map((entry) => {
+        if (entry.id !== selectedId) return entry;
+        const updated = { ...entry, [key]: value };
+        if (key === 'tags') delete updated.responsibilities;
+        return updated;
+      }),
     }));
   };
 
@@ -319,7 +323,9 @@ export default function Admin() {
                 <input value={selectedEntry.serial} onChange={(event) => updateSelectedEntry('serial', event.target.value)} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" />
               </label>
               {editor.fields.map((field) => {
-                const fieldValue = selectedEntry[field.key] ?? '';
+                const fieldValue = selectedEntry[field.key] ??
+                  (field.key === 'tags' ? selectedEntry.responsibilities : undefined) ??
+                  '';
                 if (field.kind === 'rich') {
                   return <div key={field.key} className="space-y-1 text-sm md:col-span-2"><span>{field.label}</span><RichTextEditor value={String(fieldValue)} onChange={(value) => updateSelectedEntry(field.key, value)} /></div>;
                 }
