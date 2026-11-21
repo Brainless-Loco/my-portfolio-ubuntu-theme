@@ -66,7 +66,7 @@ export default function EntryController() {
            </div>
         </div>
 
-        <h1 className="text-3xl font-light tracking-widest mb-12">tonmoyOS</h1>
+        <h1 className="text-3xl font-light tracking-widest mb-12">Tonmoy Chandro Das</h1>
 
         {bootType === 'cold' ? (
           <div className="w-64 space-y-4">
