@@ -60,6 +60,9 @@ export function subscribeToPortfolio(
         } else if (Array.isArray(data.entries)) {
           Object.assign(patch, { [section.id]: data.entries as PortfolioEntry[] });
         }
+        if (section.id === 'publications' && Array.isArray(data.publicationTypeOrder)) {
+          patch.publicationTypeOrder = data.publicationTypeOrder.filter((type): type is string => typeof type === 'string');
+        }
 
         onUpdate(patch);
       }, onError),
@@ -106,6 +109,7 @@ export async function savePortfolioToCloud(portfolio: PortfolioState): Promise<v
       data.academicExperience = portfolio.academicExperience;
     } else {
       data.entries = portfolio[section.id];
+      if (section.id === 'publications') data.publicationTypeOrder = portfolio.publicationTypeOrder;
     }
 
     assertDocumentSize(`Section "${section.title}"`, data);

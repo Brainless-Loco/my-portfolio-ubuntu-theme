@@ -15,8 +15,8 @@ import {
 } from '../../store/portfolioSlice';
 import { savePortfolioToCloud } from '../../lib/portfolioCloud';
 
-type CollectionKey = Exclude<keyof PortfolioState, 'homeRichText' | 'sections' | 'commands' | 'schedules'>;
-type Field = { key: string; label: string; kind?: 'list' | 'rich' | 'url' };
+type CollectionKey = Exclude<keyof PortfolioState, 'homeRichText' | 'sections' | 'commands' | 'schedules' | 'publicationTypeOrder'>;
+type Field = { key: string; label: string; kind?: 'list' | 'rich' | 'url' | 'suggest'; suggestions?: string[] };
 type EditorOption = { id: string; label: string; key: CollectionKey; fields: Field[] };
 
 const editorOptions: EditorOption[] = [
@@ -66,6 +66,7 @@ const editorOptions: EditorOption[] = [
     { key: 'startDate', label: 'Start date' }, { key: 'endDate', label: 'End date' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'publications', label: 'Publications', key: 'publications', fields: [
+    { key: 'publicationType', label: 'Publication type', kind: 'suggest', suggestions: ['Journal', 'Conference', 'Presentation', 'Book', 'Preprint', 'Poster', 'Workshop', 'Thesis', 'Other'] },
     { key: 'title', label: 'Title' }, { key: 'author', label: 'Author(s)' }, { key: 'publication', label: 'Journal / publisher' },
     { key: 'date', label: 'Date' }, { key: 'url', label: 'Publication link', kind: 'url' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
@@ -77,6 +78,10 @@ const editorOptions: EditorOption[] = [
 
 function entryTitle(entry: PortfolioEntry, index: number): string {
   return String(entry.title || entry.role || entry.name || entry.degree || entry.language || `Item ${index + 1}`);
+}
+
+function normalizePublicationType(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 }
 
 export default function Admin() {
@@ -98,6 +103,23 @@ export default function Admin() {
   const editor = editorOptions.find((option) => option.id === activeEditor) ?? editorOptions[0];
   const entries = draft[editor.key] as PortfolioEntry[];
   const selectedEntry = entries.find((entry) => entry.id === selectedId);
+  const savedPublicationTypeOrder = draft.publicationTypeOrder ?? [];
+  const publicationTypeMap = new Map<string, string>();
+  if (editor.id === 'publications') {
+    entries.forEach((entry) => {
+      const label = String(entry.publicationType || 'Other').trim() || 'Other';
+      const key = normalizePublicationType(label);
+      if (!publicationTypeMap.has(key)) publicationTypeMap.set(key, label);
+    });
+  }
+  const publicationTypes = Array.from(publicationTypeMap.values());
+  const configuredTypeKeys = Array.from(new Set(savedPublicationTypeOrder.map(normalizePublicationType)));
+  const orderedPublicationTypes = [
+    ...configuredTypeKeys
+      .map((key) => publicationTypes.find((type) => normalizePublicationType(type) === key))
+      .filter((type): type is string => Boolean(type)),
+    ...publicationTypes.filter((type) => !configuredTypeKeys.includes(normalizePublicationType(type))),
+  ];
 
   useEffect(() => {
     setDraft(portfolio);
@@ -184,6 +206,14 @@ export default function Admin() {
       ...current,
       sections: current.sections.map((section) => section.id === id ? { ...section, [field]: value } : section),
     }));
+  };
+
+  const movePublicationType = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= orderedPublicationTypes.length) return;
+    const nextOrder = [...orderedPublicationTypes];
+    [nextOrder[index], nextOrder[targetIndex]] = [nextOrder[targetIndex], nextOrder[index]];
+    updateDraft((current) => ({ ...current, publicationTypeOrder: nextOrder }));
   };
 
   const save = async () => {
@@ -310,6 +340,27 @@ export default function Admin() {
               <button onClick={deleteEntry} disabled={!selectedEntry} className="rounded-lg border border-red-400/30 px-3 py-2 text-sm text-red-300 enabled:hover:bg-red-400/10 disabled:opacity-40">Delete item</button>
             </div>
           </div>
+          {editor.id === 'publications' && (
+            <div className="mb-5 rounded-lg border border-white/10 bg-black/20 p-4">
+              <h3 className="mb-1 font-medium">Publication type order</h3>
+              <p className="mb-3 text-xs text-white/50">Use the arrows to change the order of publication groups in the client view.</p>
+              {orderedPublicationTypes.length === 0 ? (
+                <p className="text-sm text-white/50">Add a publication to create a group.</p>
+              ) : (
+                <ol className="space-y-2">
+                  {orderedPublicationTypes.map((type, index) => (
+                    <li key={type} className="flex items-center justify-between rounded bg-white/5 px-3 py-2 text-sm">
+                      <span>{type}</span>
+                      <span className="flex gap-2">
+                        <button type="button" aria-label={`Move ${type} up`} disabled={index === 0} onClick={() => movePublicationType(index, -1)} className="rounded border border-white/15 px-2 py-1 disabled:opacity-30">↑</button>
+                        <button type="button" aria-label={`Move ${type} down`} disabled={index === orderedPublicationTypes.length - 1} onClick={() => movePublicationType(index, 1)} className="rounded border border-white/15 px-2 py-1 disabled:opacity-30">↓</button>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
+          )}
           <div className="mb-4 max-w-xl">
             <select aria-label={`Select ${editor.label} item`} value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className="w-full rounded-lg border border-white/15 bg-[#28212b] px-3 py-2">
               <option value="">Select item</option>
@@ -331,6 +382,10 @@ export default function Admin() {
                 }
                 if (field.kind === 'list') {
                   return <label key={field.key} className="space-y-1 text-sm md:col-span-2"><span>{field.label}</span><textarea rows={4} value={Array.isArray(fieldValue) ? fieldValue.join('\n') : String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value.split('\n').filter((line) => line.trim()))} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" /></label>;
+                }
+                if (field.kind === 'suggest') {
+                  const listId = `${field.key}-suggestions`;
+                  return <label key={field.key} className="space-y-1 text-sm"><span>{field.label}</span><input list={listId} value={String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value)} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" /><datalist id={listId}>{field.suggestions?.map((suggestion) => <option key={suggestion} value={suggestion} />)}</datalist></label>;
                 }
                 return <label key={field.key} className="space-y-1 text-sm"><span>{field.label}</span><input type={field.kind === 'url' ? 'url' : 'text'} value={String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value)} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" /></label>;
               })}

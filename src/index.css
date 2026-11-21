@@ -116,6 +116,19 @@
     padding-left: 1.5rem;
   }
 
+  .activity-accordion-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .activity-accordion-chevron {
+    flex-shrink: 0;
+    transition: transform 160ms ease;
+  }
+
+  .activity-accordion[open] .activity-accordion-chevron {
+    transform: rotate(180deg);
+  }
+
   .rich-text-prose blockquote {
     border-left: 3px solid #f97316;
     padding-left: 0.75rem;

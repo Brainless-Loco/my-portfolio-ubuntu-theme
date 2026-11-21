@@ -55,6 +55,7 @@ export type PortfolioState = {
   honors: PortfolioEntry[];
   activities: PortfolioEntry[];
   publications: PortfolioEntry[];
+  publicationTypeOrder: string[];
   news: PortfolioEntry[];
   commands: TerminalCommand[];
   schedules: PortfolioSchedule[];
@@ -86,6 +87,7 @@ export const initialPortfolioState: PortfolioState = {
   honors: [],
   activities: [],
   publications: [],
+  publicationTypeOrder: [],
   news: [],
   commands: [
     { id: 'whoami', command: 'whoami', output: 'Portfolio owner', sectionId: '' },
