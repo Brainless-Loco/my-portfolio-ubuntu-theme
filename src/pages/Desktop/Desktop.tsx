@@ -34,7 +34,7 @@ export default function Desktop() {
       {/* OS UI Layers */}
       <TopBar />
       
-      <main className="absolute inset-0">
+      <main className="absolute inset-0 z-10">
         <WindowManager />
       </main>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Provider, useDispatch } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './store/store';
 import { initialPortfolioState, mergePortfolio } from './store/portfolioSlice';
@@ -8,6 +8,7 @@ import { subscribeToPortfolio } from './lib/portfolioCloud';
 import EntryController from './pages/EntryController/EntryController';
 import Desktop from './pages/Desktop/Desktop';
 import Admin from './pages/Admin/Admin';
+import { RootState } from './store/store';
 
 const publicRoutes = [
   'home',
@@ -27,6 +28,16 @@ const publicRoutes = [
   'trash',
   'contact',
 ];
+
+function AccentColorSync() {
+  const accentColor = useSelector((state: RootState) => state.os.accentColor);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent-color', accentColor);
+  }, [accentColor]);
+
+  return null;
+}
 
 function PortfolioCloudSync() {
   const dispatch = useDispatch();
@@ -68,6 +79,7 @@ export default function App() {
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <Router>
+          <AccentColorSync />
           <PortfolioCloudSync />
           <Routes>
             <Route path="/" element={<EntryController />} />

@@ -9,7 +9,7 @@ import { cn } from '../../lib/utils';
 
 const apps = [
   { id: 'terminal', icon: Terminal, label: 'Terminal', type: 'terminal', color: 'bg-[#300a24]' },
-  { id: 'explorer', icon: Folder, label: 'Home', type: 'explorer', color: 'bg-orange-600' },
+  { id: 'explorer', icon: Folder, label: 'Home', type: 'explorer', color: 'accent-bg' },
   { id: 'contact', icon: Mail, label: 'Contact Me', type: 'contact', color: 'bg-red-600' },
   { id: 'divider', type: 'divider' },
   { id: 'settings', icon: Settings, label: 'Settings', type: 'settings', color: 'bg-gray-600' },
@@ -51,7 +51,7 @@ export default function Dock() {
           isMobile ? (
             "bottom-0 left-0 right-0 flex-row justify-center rounded-t-2xl opacity-90"
           ) : (
-            "left-0 top-1/2 -translate-y-1/2 flex-col rounded-r-2xl opacity-100"
+            "left-0 top-1/2 -translate-y-1/2 flex-col rounded-r-2xl opacity-60 hover:opacity-100"
             )
           )}
         >

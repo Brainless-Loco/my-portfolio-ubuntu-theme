@@ -67,7 +67,7 @@ export default function LockScreen() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={`rounded-full bg-white/10 flex items-center justify-center border border-white/20 ${isMobile ? 'w-16 h-16' : 'w-24 h-24'}`}>
-              <div className={`rounded-full bg-orange-600 flex items-center justify-center font-bold ${isMobile ? 'w-12 h-12 text-xl' : 'w-16 h-16 text-2xl'}`}>
+              <div className={`rounded-full accent-bg flex items-center justify-center font-bold ${isMobile ? 'w-12 h-12 text-xl' : 'w-16 h-16 text-2xl'}`}>
                 T
               </div>
             </div>
@@ -77,7 +77,7 @@ export default function LockScreen() {
             </div>
             <button 
               onClick={handleUnlock}
-              className={`bg-orange-600 hover:bg-orange-700 rounded-full font-medium transition-colors ${isMobile ? 'px-6 py-1.5 text-sm' : 'px-8 py-2'}`}
+              className={`accent-bg rounded-full font-medium transition-colors ${isMobile ? 'px-6 py-1.5 text-sm' : 'px-8 py-2'}`}
             >
               {language === 'en' ? 'Enter' : 'প্রবেশ করুন'}
             </button>

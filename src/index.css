@@ -5,6 +5,32 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+:root {
+  --accent-color: #e95420;
+  --accent-color-hover: color-mix(in srgb, var(--accent-color), black 15%);
+  --accent-color-light: color-mix(in srgb, var(--accent-color), white 25%);
+}
+
+.accent-bg {
+  background-color: var(--accent-color);
+}
+
+.accent-bg:hover {
+  background-color: var(--accent-color-hover);
+}
+
+.accent-hover-bg:hover {
+  background-color: var(--accent-color);
+}
+
+.accent-text {
+  color: var(--accent-color-light);
+}
+
+.accent-text:hover {
+  filter: brightness(1.15);
+}
+
 @layer base {
   * {
     scrollbar-width: thin;
@@ -130,13 +156,13 @@
   }
 
   .rich-text-prose blockquote {
-    border-left: 3px solid #f97316;
+    border-left: 3px solid var(--accent-color);
     padding-left: 0.75rem;
     color: rgba(255, 255, 255, 0.7);
   }
 
   .rich-text-prose a {
-    color: #fdba74;
+    color: var(--accent-color-light);
     text-decoration: underline;
   }
 
@@ -172,7 +198,7 @@
     height: 14px;
     border: 2px solid white;
     border-radius: 3px;
-    background: #f97316;
+    background: var(--accent-color);
     cursor: nwse-resize;
     touch-action: none;
   }

@@ -156,7 +156,7 @@ export default function TopBar() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className={cn("absolute top-10 bg-[#2d2d2d] border border-white/10 rounded-xl shadow-2xl p-6 flex gap-6", isMobile ? "w-72 left-0" : "w-[500px] left-1/2 -translate-x-1/2")}
+                className={cn("absolute top-10 z-50 bg-[#2d2d2d] border border-white/10 rounded-xl shadow-2xl p-6 flex gap-6", isMobile ? "w-72 left-0" : "w-[500px] left-1/2 -translate-x-1/2")}
               >
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-4">
@@ -185,7 +185,7 @@ export default function TopBar() {
                           onClick={() => handleDateClick(i + 1)}
                           className={cn(
                             "p-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer",
-                            isCurrentDate ? "bg-orange-600 text-white font-bold" : isSelectedDate ? "bg-white/20 font-bold" : ""
+                            isCurrentDate ? "accent-bg text-white font-bold" : isSelectedDate ? "bg-white/20 font-bold" : ""
                           )}
                         >
                           {i + 1}
@@ -204,7 +204,7 @@ export default function TopBar() {
                     {filteredSchedules.length > 0 ? (
                       filteredSchedules.map((schedule) => (
                         <div key={schedule.id} className="space-y-1">
-                          <div className="text-[11px] font-bold text-orange-400">{schedule.title}</div>
+                          <div className="accent-text text-[11px] font-bold">{schedule.title}</div>
                           <div className="text-[9px] opacity-70 line-clamp-2">{schedule.description}</div>
                           <div className="text-[8px] opacity-40">{schedule.time}</div>
                         </div>
@@ -216,7 +216,7 @@ export default function TopBar() {
                   <button
                     type="button"
                     onClick={() => { navigate('/admin#schedules'); setShowCalendar(false); }}
-                    className="text-[9px] font-medium text-orange-300 hover:text-orange-200"
+                    className="accent-text text-[9px] font-medium"
                   >
                     Manage schedules
                   </button>
@@ -248,7 +248,7 @@ export default function TopBar() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="absolute top-10 right-0 w-72 bg-[#2d2d2d] border border-white/10 rounded-xl shadow-2xl p-4 space-y-4"
+                className="absolute top-10 right-0 z-50 w-72 bg-[#2d2d2d] border border-white/10 rounded-xl shadow-2xl p-4 space-y-4"
               >
                 {/* Volume Slider */}
                 <div className="space-y-2">

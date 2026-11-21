@@ -213,7 +213,7 @@ export default function Window({ window, children }: WindowProps) {
           <button 
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); dispatch(closeWindow(window.id)); }}
-            className="w-6 h-6 flex items-center justify-center rounded-full bg-[#c7162b] hover:bg-[#e95420] text-white transition-colors"
+            className="w-6 h-6 flex items-center justify-center rounded-full bg-[#c7162b] accent-hover-bg text-white transition-colors"
           >
             <X size={14} />
           </button>

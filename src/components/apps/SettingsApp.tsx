@@ -109,9 +109,10 @@ export default function SettingsApp() {
               <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2'}`}>
                 <button 
                   onClick={() => dispatch(setTheme('light'))}
+                  style={currentTheme === 'light' ? { borderColor: currentAccent } : undefined}
                   className={cn(
                     "p-3 rounded-lg border-2 transition-all",
-                    currentTheme === 'light' ? "border-orange-500 bg-white/5" : "border-transparent bg-black/20"
+                    currentTheme === 'light' ? "bg-white/5" : "border-transparent bg-black/20"
                   )}
                 >
                   <div className={`${isMobile ? 'h-16' : 'h-24'} bg-gray-100 rounded-lg mb-2`} />
@@ -119,9 +120,10 @@ export default function SettingsApp() {
                 </button>
                 <button 
                   onClick={() => dispatch(setTheme('dark'))}
+                  style={currentTheme === 'dark' ? { borderColor: currentAccent } : undefined}
                   className={cn(
                     "p-3 rounded-lg border-2 transition-all",
-                    currentTheme === 'dark' ? "border-orange-500 bg-white/5" : "border-transparent bg-black/20"
+                    currentTheme === 'dark' ? "bg-white/5" : "border-transparent bg-black/20"
                   )}
                 >
                   <div className={`${isMobile ? 'h-16' : 'h-24'} bg-gray-800 rounded-lg mb-2`} />
@@ -136,6 +138,9 @@ export default function SettingsApp() {
                 {accentColors.map((color) => (
                   <button
                     key={color.value}
+                    type="button"
+                    aria-label={`Set accent color to ${color.name}`}
+                    aria-pressed={currentAccent === color.value}
                     onClick={() => dispatch(setAccentColor(color.value))}
                     style={{ backgroundColor: color.value }}
                     className={cn(
@@ -151,7 +156,7 @@ export default function SettingsApp() {
             <section>
               <div className={`flex items-center justify-between mb-3 flex-col md:flex-row gap-2`}>
                 <h3 className={`font-medium ${isMobile ? 'text-sm' : 'text-lg'}`}>Background</h3>
-                <label className={`text-xs bg-orange-600 hover:bg-orange-700 text-white px-3 py-1.5 rounded-full cursor-pointer transition-colors`}>
+                <label className="accent-bg text-xs text-white px-3 py-1.5 rounded-full cursor-pointer transition-colors">
                   Upload Image
                   <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
                 </label>
@@ -161,9 +166,10 @@ export default function SettingsApp() {
                   <button
                     key={wp}
                     onClick={() => dispatch(setWallpaper(wp))}
+                    style={currentWallpaper === wp ? { borderColor: currentAccent } : undefined}
                     className={cn(
                       "aspect-video rounded-lg overflow-hidden border-2 transition-all",
-                      currentWallpaper === wp ? "border-orange-500 scale-95" : "border-transparent hover:scale-105"
+                      currentWallpaper === wp ? "scale-95" : "border-transparent hover:scale-105"
                     )}
                   >
                     <img src={wp} alt="Wallpaper" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -185,13 +191,14 @@ export default function SettingsApp() {
                 <button
                   key={lang.id}
                   onClick={() => dispatch(setLanguage(lang.id as any))}
+                  style={currentLang === lang.id ? { borderColor: currentAccent } : undefined}
                   className={cn(
                     "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-sm",
-                    currentLang === lang.id ? "border-orange-500 bg-white/5" : "border-transparent bg-black/10"
+                    currentLang === lang.id ? "bg-white/5" : "border-transparent bg-black/10"
                   )}
                 >
                   <span>{lang.label}</span>
-                  {currentLang === lang.id && <div className="w-2 h-2 bg-orange-500 rounded-full" />}
+                  {currentLang === lang.id && <div className="accent-bg w-2 h-2 rounded-full" />}
                 </button>
               ))}
             </div>
