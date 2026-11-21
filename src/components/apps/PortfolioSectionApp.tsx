@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Card, CardContent, Chip, Typography } from '@mui/material';
-import { Award, Building2, CalendarDays, ChevronDown, ExternalLink, Github, GraduationCap, MapPin } from 'lucide-react';
+import { Award, Building2, CalendarDays, ChevronDown, Code2, ExternalLink, FileText, Github, GraduationCap, Link2, Linkedin, MapPin, MessageCircle } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { sanitizeRichText } from '../../lib/richText';
+import { sortPortfolioEntriesBySerial } from '../../lib/portfolio';
 import { PortfolioEntry, PortfolioSectionId } from '../../store/portfolioSlice';
 import { RootState } from '../../store/store';
 
@@ -12,6 +13,11 @@ type PublicationGroup = { label: string; entries: PortfolioEntry[] };
 
 function entryName(entry: PortfolioEntry, index: number): string {
   return String(entry.title || entry.role || entry.name || entry.degree || entry.language || `Item ${index + 1}`);
+}
+
+function skillNames(entry: PortfolioEntry): string[] {
+  const names = textValue(entry, 'name').split(',').map((name) => name.trim()).filter(Boolean);
+  return names.length > 0 ? names : [entryName(entry, 0)];
 }
 
 function externalUrl(value: string): string | null {
@@ -45,7 +51,17 @@ function linkLabel(key: string): string {
   return label || 'Open link';
 }
 
-function groupSkills(entries: PortfolioEntry[]): SkillGroup[] {
+function profileIcon(icon: string) {
+  switch (icon.toLocaleLowerCase()) {
+    case 'github': return Github;
+    case 'linkedin': return Linkedin;
+    case 'whatsapp': return MessageCircle;
+    case 'codeforces': return Code2;
+    default: return Link2;
+  }
+}
+
+function groupByCategory(entries: PortfolioEntry[]): SkillGroup[] {
   const groups = new Map<string, SkillGroup>();
   entries.forEach((entry) => {
     const label = textValue(entry, 'category') || 'Other';
@@ -70,17 +86,7 @@ function groupPublications(entries: PortfolioEntry[], order: string[]): Publicat
   const groupOrder = new Map(order.map((type, index) => [type.replace(/\s+/g, ' ').toLocaleLowerCase(), index]));
   return Array.from(groups.entries())
     .sort(([firstKey], [secondKey]) => (groupOrder.get(firstKey) ?? Number.MAX_SAFE_INTEGER) - (groupOrder.get(secondKey) ?? Number.MAX_SAFE_INTEGER))
-    .map(([, group]) => ({
-      ...group,
-      entries: group.entries
-        .map((entry, index) => ({ entry, index, serial: Number(entry.serial) }))
-        .sort((first, second) => {
-          const firstOrder = Number.isFinite(first.serial) ? first.serial : Number.MAX_SAFE_INTEGER;
-          const secondOrder = Number.isFinite(second.serial) ? second.serial : Number.MAX_SAFE_INTEGER;
-          return firstOrder - secondOrder || first.index - second.index;
-        })
-        .map(({ entry }) => entry),
-    }));
+    .map(([, group]) => ({ ...group, entries: sortPortfolioEntriesBySerial(group.entries) }));
 }
 
 function PortfolioDescription({
@@ -89,18 +95,20 @@ function PortfolioDescription({
   textColor,
   background,
   borderColor,
+  summary = 'Show details',
 }: {
   description: string;
   accentColor: string;
   textColor: string;
   background: string;
   borderColor: string;
+  summary?: string;
 }) {
   if (!description) return null;
   return (
     <details style={{ marginTop: 12, border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden' }}>
       <summary style={{ cursor: 'pointer', padding: '9px 12px', color: accentColor, fontWeight: 600 }}>
-        Show details
+        {summary}
       </summary>
       <Box
         className="portfolio-rich-text"
@@ -139,7 +147,7 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
   const portfolio = useSelector((state: RootState) => state.portfolio);
   const isDark = theme === 'dark';
   const dataKey = experienceKey ?? (sectionId === 'english' ? 'english' : sectionId);
-  const entries = portfolio[dataKey] as PortfolioEntry[];
+  const entries = (portfolio[dataKey] as PortfolioEntry[] | undefined) ?? [];
   const title = experienceKey
     ? experienceKey === 'professionalExperience' ? 'Professional Experience' : 'Academic Experience'
     : portfolio.sections.find((section) => section.id === sectionId)?.title || sectionId;
@@ -148,15 +156,17 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
   const [visibleActivityCount, setVisibleActivityCount] = useState(5);
   const activityScrollRef = useRef<HTMLDivElement>(null);
   const activitySentinelRef = useRef<HTMLDivElement>(null);
+  const serialOrderedEntries = useMemo(() => sortPortfolioEntriesBySerial(entries), [entries]);
   const orderedEntries = useMemo(
-    () => isRecentActivities ? [...entries].reverse() : entries,
-    [entries, isRecentActivities],
+    () => isRecentActivities ? [...serialOrderedEntries].reverse() : serialOrderedEntries,
+    [serialOrderedEntries, isRecentActivities],
   );
   const visibleEntries = isRecentActivities ? orderedEntries.slice(0, visibleActivityCount) : orderedEntries;
-  const skills = sectionId === 'skills' ? groupSkills(entries) : [];
+  const skills = sectionId === 'skills' ? groupByCategory(serialOrderedEntries) : [];
   const publicationGroups = sectionId === 'publications'
     ? groupPublications(entries, portfolio.publicationTypeOrder ?? [])
     : [];
+  const profileGroups = sectionId === 'profiles' ? groupByCategory(serialOrderedEntries) : [];
 
   useEffect(() => {
     setVisibleActivityCount(5);
@@ -202,32 +212,28 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
             <Card key={group.label.toLocaleLowerCase()} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
               <CardContent>
                 <Typography variant="h6" sx={{ mb: 1.5 }}>{group.label}</Typography>
-                <Box sx={{ display: 'grid', gap: 1.25 }}>
-                  {group.entries.map((entry, index) => {
-                    const description = typeof entry.description === 'string' ? sanitizeRichText(entry.description) : '';
-                    const links = Object.entries(entry).filter(([key, value]) => isLinkField(key) && typeof value === 'string' && value.trim());
-                    return (
-                      <Box key={entry.id} sx={{ border: `1px solid ${borderColor}`, borderRadius: 2, p: 1.5 }}>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                          <Chip size="small" label={entryName(entry, index)} sx={{ bgcolor: isDark ? '#404040' : '#e8e8e8', color: textColor }} />
-                          {textValue(entry, 'score') && <Typography variant="body2" sx={{ color: mutedText }}>{textValue(entry, 'score')}</Typography>}
-                        </Box>
-                        {links.length > 0 && (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>
-                            {links.map(([key, value]) => <PortfolioLink key={key} field={key} value={String(value)} accentColor={accentColor} />)}
-                          </Box>
-                        )}
-                        <PortfolioDescription
-                          description={description}
-                          accentColor={accentColor}
-                          textColor={textColor}
-                          background={detailBackground}
-                          borderColor={borderColor}
-                        />
-                      </Box>
-                    );
-                  })}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                  {group.entries.flatMap((entry) => skillNames(entry).map((skill, index) =>
+                    <Chip key={`${entry.id}-${index}`} size="small" label={skill} title={textValue(entry, 'score') || undefined} sx={{ bgcolor: isDark ? '#404040' : '#e8e8e8', color: textColor }} />,
+                  ))}
                 </Box>
+                {group.entries.map((entry) => {
+                  const description = typeof entry.description === 'string' ? sanitizeRichText(entry.description) : '';
+                  const links = Object.entries(entry).filter(([key, value]) => isLinkField(key) && typeof value === 'string' && value.trim());
+                  return (
+                    <Box key={entry.id}>
+                      {links.length > 0 && <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1 }}>{links.map(([key, value]) => <PortfolioLink key={key} field={key} value={String(value)} accentColor={accentColor} />)}</Box>}
+                      <PortfolioDescription
+                        description={description}
+                        accentColor={accentColor}
+                        textColor={textColor}
+                        background={detailBackground}
+                        borderColor={borderColor}
+                        summary={`Details: ${skillNames(entry).join(', ')}`}
+                      />
+                    </Box>
+                  );
+                })}
               </CardContent>
             </Card>
           ))}
@@ -240,10 +246,10 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
             const links = Object.entries(entry).filter(([key, value]) => isLinkField(key) && typeof value === 'string' && value.trim());
             return (
               <Box key={entry.id} component="details" className="activity-accordion" sx={{ border: `1px solid ${borderColor}`, borderRadius: 1.5, bgcolor: cardBackground }}>
-                <Box component="summary" className="activity-accordion-summary" sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 0.9, cursor: 'pointer', listStyle: 'none' }}>
-                  {date && <Typography component="span" variant="caption" sx={{ flexShrink: 0, color: mutedText }}>{date}</Typography>}
-                  <Typography component="span" variant="body2" sx={{ flex: 1, color: textColor, fontWeight: 600 }}>{entryName(entry, index)}</Typography>
-                  <ChevronDown className="activity-accordion-chevron" size={17} aria-hidden="true" />
+                <Box component="summary" className="activity-accordion-summary" sx={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', columnGap: 1.5, rowGap: 0.2, px: 1.5, py: 0.75, cursor: 'pointer', listStyle: 'none' }}>
+                  {date && <Typography component="span" variant="caption" sx={{ gridColumn: 1, gridRow: 1, alignSelf: 'center', color: mutedText }}>{date}</Typography>}
+                  <Typography component="span" variant="body2" sx={{ gridColumn: 1, gridRow: date ? 2 : 1, alignSelf: 'center', color: textColor, fontWeight: 600 }}>{entryName(entry, index)}</Typography>
+                  <ChevronDown className="activity-accordion-chevron" size={17} aria-hidden="true" style={{ gridColumn: 2, gridRow: date ? '1 / span 2' : 1 }} />
                 </Box>
                 {(description || links.length > 0) && (
                   <Box sx={{ px: 1.5, pb: 1.25, pt: 0.5, borderTop: `1px solid ${borderColor}` }}>
@@ -271,16 +277,49 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
                   return (
                     <Card key={entry.id} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
                       <CardContent sx={{ '&:last-child': { pb: 1.5 }, py: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-                          {href ? (
-                            <a href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: accentColor, fontWeight: 600, textDecoration: 'none' }}>
-                              {entryName(entry, index)} <ExternalLink size={14} aria-hidden="true" />
-                            </a>
-                          ) : <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{entryName(entry, index)}</Typography>}
-                          {date && <Typography variant="caption" sx={{ flexShrink: 0, color: mutedText }}>{date}</Typography>}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {href
+                            ? <a href={href} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: accentColor, fontWeight: 600, textDecoration: 'none' }}>{entryName(entry, index)}</a>
+                            : <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{entryName(entry, index)}</Typography>}
+                          {href && <a aria-label={`Open ${entryName(entry, index)}`} href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', marginLeft: 'auto', color: accentColor }}><ExternalLink size={20} /></a>}
                         </Box>
-                        {(author || publisher) && <Typography variant="body2" sx={{ mt: 0.4, color: mutedText }}>{[author, publisher].filter(Boolean).join(' · ')}</Typography>}
+                        {author && <Typography variant="body2" sx={{ mt: 0.5, color: mutedText }}>{author}</Typography>}
+                        {publisher && <Typography variant="body2" sx={{ mt: 0.25, color: mutedText }}>{publisher}</Typography>}
+                        {date && <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 0.75 }}><Chip label={date} size="small" sx={{ px: 1.5, height: 30, bgcolor: isDark ? '#404040' : '#e8e8e8', color: mutedText }} /></Box>}
                         <PortfolioDescription description={description} accentColor={accentColor} textColor={textColor} background={detailBackground} borderColor={borderColor} />
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      ) : sectionId === 'profiles' ? (
+        <Box sx={{ display: 'grid', gap: 2 }}>
+          {profileGroups.map((group) => (
+            <Box key={group.label.toLocaleLowerCase()}>
+              <Typography variant="h6" sx={{ mb: 1, color: textColor }}>{group.label}</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(220px, 1fr))' }, gap: 1.5 }}>
+                {group.entries.map((entry, index) => {
+                  const href = externalUrl(textValue(entry, 'url'));
+                  const description = textValue(entry, 'description');
+                  const name = entryName(entry, index);
+                  const iconUrl = externalUrl(textValue(entry, 'iconUrl'));
+                  const Icon = profileIcon(textValue(entry, 'icon'));
+                  return (
+                    <Card key={entry.id} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
+                      <CardContent sx={{ '&:last-child': { pb: 1.5 }, py: 1.5, height: '100%' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                          <Box sx={{ display: 'grid', width: 36, height: 36, flexShrink: 0, placeItems: 'center', borderRadius: 1.5, border: `1px solid ${borderColor}`, color: accentColor }}>
+                            {iconUrl ? <img src={iconUrl} alt="" style={{ width: 22, height: 22, objectFit: 'contain' }} /> : <Icon size={20} />}
+                          </Box>
+                          {href
+                            ? <a href={href} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: accentColor, fontWeight: 600, textDecoration: 'none' }}>{name}</a>
+                            : <Typography variant="subtitle1" sx={{ flex: 1, fontWeight: 600 }}>{name}</Typography>}
+                          {href && <a aria-label={`Open ${name}`} href={href} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', color: accentColor }}><ExternalLink size={18} /></a>}
+                        </Box>
+                        {description && <Typography variant="body2" sx={{ color: mutedText }}>{description}</Typography>}
                       </CardContent>
                     </Card>
                   );
@@ -329,12 +368,15 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
                 return (
                   <Card key={entry.id} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
                     <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                      <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: '1.05rem', fontWeight: 600 }}>
-                        <Award size={18} aria-hidden="true" />
-                        {certificateUrl
-                          ? <a href={certificateUrl} target="_blank" rel="noopener noreferrer" style={{ color: accentColor, textDecoration: 'none' }}>{entryName(entry, index)} <ExternalLink size={14} aria-hidden="true" /></a>
-                          : entryName(entry, index)}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Award size={26} aria-hidden="true" />
+                        <Typography variant="h6" sx={{ flex: 1, fontSize: '1.05rem', fontWeight: 600 }}>
+                          {certificateUrl
+                            ? <a href={certificateUrl} target="_blank" rel="noopener noreferrer" style={{ color: accentColor, textDecoration: 'none' }}>{entryName(entry, index)}</a>
+                            : entryName(entry, index)}
+                        </Typography>
+                        {certificateUrl && <a aria-label={`Open ${entryName(entry, index)} certificate`} href={certificateUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', color: accentColor }}><ExternalLink size={18} /></a>}
+                      </Box>
                       {textValue(entry, 'issuer') && <Typography variant="body2" sx={{ mt: 0.75, color: mutedText }}>{textValue(entry, 'issuer')}</Typography>}
                       {textValue(entry, 'date') && <Typography variant="caption" sx={{ display: 'block', mt: 0.4, color: mutedText }}>{textValue(entry, 'date')}</Typography>}
                       <PortfolioDescription description={description} accentColor={accentColor} textColor={textColor} background={detailBackground} borderColor={borderColor} />
@@ -349,11 +391,13 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
                 return (
                   <Card key={entry.id} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
                     <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                      <Typography variant="h6" sx={{ mb: 0.75, fontSize: '1.05rem', fontWeight: 600 }}>{entryName(entry, index)}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" sx={{ flex: 1, fontSize: '1.05rem', fontWeight: 600 }}>{entryName(entry, index)}</Typography>
+                        {githubUrl && <a aria-label="GitHub project" href={githubUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${borderColor}`, borderRadius: '50%', padding: 6, color: accentColor }}><Github size={19} /></a>}
+                      </Box>
                       {textValue(entry, 'projectTime') && <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: mutedText }}><CalendarDays size={15} aria-hidden="true" />{textValue(entry, 'projectTime')}</Typography>}
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mt: 1 }}>
                         {listValue(entry.tools).map((tool, toolIndex) => <Chip key={`${tool}-${toolIndex}`} size="small" label={tool} sx={{ bgcolor: isDark ? '#404040' : '#e8e8e8', color: mutedText }} />)}
-                        {githubUrl && <a aria-label="GitHub project" href={githubUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', color: accentColor }}><Github size={19} /></a>}
                         {liveUrl && <a aria-label="Live project" href={liveUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', color: accentColor }}><ExternalLink size={17} /></a>}
                       </Box>
                       <PortfolioDescription description={description} accentColor={accentColor} textColor={textColor} background={detailBackground} borderColor={borderColor} />
@@ -367,7 +411,7 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
                 return (
                   <Card key={entry.id} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
                     <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                      <Typography variant="h6" sx={{ mb: 0.4, fontSize: '1.05rem', fontWeight: 600 }}>{entryName(entry, index)}</Typography>
+                      <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.4, fontSize: '1.05rem', fontWeight: 600 }}><Award size={19} aria-hidden="true" />{entryName(entry, index)}</Typography>
                       {textValue(entry, 'issuer') && <Typography variant="body2" sx={{ color: mutedText }}>{textValue(entry, 'issuer')}</Typography>}
                       {textValue(entry, 'date') && <Typography variant="caption" sx={{ display: 'block', mt: 0.4, color: mutedText }}>{textValue(entry, 'date')}</Typography>}
                       {url && <Box sx={{ mt: 0.75 }}><a aria-label="Award details" href={url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', color: accentColor }}><ExternalLink size={16} /></a></Box>}
@@ -383,9 +427,9 @@ export default function PortfolioSectionApp({ sectionId, experienceKey }: Props)
                 return (
                   <Card key={entry.id} sx={{ bgcolor: cardBackground, border: `1px solid ${borderColor}`, color: textColor }}>
                     <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                      <Typography variant="h6" sx={{ mb: 0.4, fontSize: '1.05rem', fontWeight: 600 }}>{entryName(entry, index)}</Typography>
-                      {subject && <Typography variant="body2" sx={{ color: mutedText }}>{subject}</Typography>}
-                      {textValue(entry, 'institution') && <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75, color: mutedText }}><GraduationCap size={16} aria-hidden="true" />{textValue(entry, 'institution')}</Typography>}
+                      <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.4, fontSize: '1.05rem', fontWeight: 600 }}><GraduationCap size={18} aria-hidden="true" />{entryName(entry, index)}</Typography>
+                      {subject && <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: mutedText }}><FileText size={16} aria-hidden="true" />{subject}</Typography>}
+                      {textValue(entry, 'institution') && <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75, color: mutedText }}><Building2 size={16} aria-hidden="true" />{textValue(entry, 'institution')}</Typography>}
                       {textValue(entry, 'location') && <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.4, color: mutedText }}><MapPin size={16} aria-hidden="true" />{textValue(entry, 'location')}</Typography>}
                       {dates && <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: mutedText }}>{dates}</Typography>}
                       <PortfolioDescription description={description} accentColor={accentColor} textColor={textColor} background={detailBackground} borderColor={borderColor} />

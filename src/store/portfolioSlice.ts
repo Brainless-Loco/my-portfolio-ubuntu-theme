@@ -17,6 +17,7 @@ export type PortfolioSectionId =
   | 'honors'
   | 'activities'
   | 'publications'
+  | 'profiles'
   | 'news';
 
 export type PortfolioSection = {
@@ -55,6 +56,7 @@ export type PortfolioState = {
   honors: PortfolioEntry[];
   activities: PortfolioEntry[];
   publications: PortfolioEntry[];
+  profiles: PortfolioEntry[];
   publicationTypeOrder: string[];
   news: PortfolioEntry[];
   commands: TerminalCommand[];
@@ -75,6 +77,7 @@ export const initialPortfolioState: PortfolioState = {
     { id: 'activities', title: 'Extra Curricular Activities', visible: true, serial: 9 },
     { id: 'publications', title: 'Publications', visible: true, serial: 10 },
     { id: 'news', title: 'Recent Activities', visible: true, serial: 11 },
+    { id: 'profiles', title: 'Links & Profiles', visible: true, serial: 12 },
   ],
   professionalExperience: [],
   academicExperience: [],
@@ -87,6 +90,7 @@ export const initialPortfolioState: PortfolioState = {
   honors: [],
   activities: [],
   publications: [],
+  profiles: [],
   publicationTypeOrder: [],
   news: [],
   commands: [

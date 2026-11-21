@@ -21,10 +21,11 @@ const publicRoutes = [
   'honors',
   'activities',
   'publications',
+  'profiles',
   'news',
   'recent',
-  'starred',
   'trash',
+  'contact',
 ];
 
 function PortfolioCloudSync() {

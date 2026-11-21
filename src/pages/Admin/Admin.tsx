@@ -14,9 +14,11 @@ import {
   updatePortfolio,
 } from '../../store/portfolioSlice';
 import { savePortfolioToCloud } from '../../lib/portfolioCloud';
+import { ContactMessage, subscribeToContactMessages } from '../../lib/contactMessages';
+import { sortPortfolioEntriesBySerial } from '../../lib/portfolio';
 
 type CollectionKey = Exclude<keyof PortfolioState, 'homeRichText' | 'sections' | 'commands' | 'schedules' | 'publicationTypeOrder'>;
-type Field = { key: string; label: string; kind?: 'list' | 'rich' | 'url' | 'suggest'; suggestions?: string[] };
+type Field = { key: string; label: string; kind?: 'list' | 'rich' | 'url' | 'select' | 'suggest' | 'textarea'; suggestions?: string[]; options?: string[] };
 type EditorOption = { id: string; label: string; key: CollectionKey; fields: Field[] };
 
 const editorOptions: EditorOption[] = [
@@ -25,6 +27,13 @@ const editorOptions: EditorOption[] = [
     { key: 'workplaceAddress', label: 'Workplace address' }, { key: 'workplaceWeb', label: 'Workplace website', kind: 'url' },
     { key: 'startDate', label: 'Start date' }, { key: 'endDate', label: 'End date (use Present if current)' },
     { key: 'tags', label: 'Tags', kind: 'list' }, { key: 'description', label: 'Description', kind: 'rich' },
+  ] },
+  { id: 'profiles', label: 'Links and profiles', key: 'profiles', fields: [
+    { key: 'category', label: 'Category' }, { key: 'title', label: 'Title' },
+    { key: 'url', label: 'Link', kind: 'url' },
+    { key: 'icon', label: 'Icon', kind: 'select', options: ['None', 'GitHub', 'LinkedIn', 'WhatsApp', 'Codeforces', 'Other'] },
+    { key: 'iconUrl', label: 'Custom icon image URL (optional)', kind: 'url' },
+    { key: 'description', label: 'Short description', kind: 'textarea' },
   ] },
   { id: 'academicExperience', label: 'Academic experience', key: 'academicExperience', fields: [
     { key: 'role', label: 'Role' }, { key: 'workplaceName', label: 'Workplace name' },
@@ -45,7 +54,7 @@ const editorOptions: EditorOption[] = [
     { key: 'title', label: 'Title' }, { key: 'imageUrl', label: 'Image URL', kind: 'url' }, { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'skills', label: 'Skills', key: 'skills', fields: [
-    { key: 'name', label: 'Skill name' }, { key: 'category', label: 'Category' }, { key: 'score', label: 'Score / proficiency' },
+    { key: 'name', label: 'Skills (separate with commas)' }, { key: 'category', label: 'Category' }, { key: 'score', label: 'Score / proficiency' },
     { key: 'description', label: 'Description', kind: 'rich' },
   ] },
   { id: 'english', label: 'English proficiency', key: 'english', fields: [
@@ -100,8 +109,12 @@ export default function Admin() {
   const [activePanel, setActivePanel] = useState(location.hash === '#schedules' ? 'schedules' : editorOptions[0].id);
   const [selectedId, setSelectedId] = useState('');
   const [message, setMessage] = useState('');
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [messagesError, setMessagesError] = useState('');
   const editor = editorOptions.find((option) => option.id === activeEditor) ?? editorOptions[0];
-  const entries = draft[editor.key] as PortfolioEntry[];
+  const entries = (draft[editor.key] as PortfolioEntry[] | undefined) ?? [];
+  const orderedEntries = sortPortfolioEntriesBySerial(entries);
   const selectedEntry = entries.find((entry) => entry.id === selectedId);
   const savedPublicationTypeOrder = draft.publicationTypeOrder ?? [];
   const publicationTypeMap = new Map<string, string>();
@@ -140,6 +153,22 @@ export default function Admin() {
     );
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || activePanel !== 'messages') return;
+    setIsMessagesLoading(true);
+    setMessagesError('');
+    return subscribeToContactMessages(
+      (messages) => {
+        setContactMessages(messages);
+        setIsMessagesLoading(false);
+      },
+      (error) => {
+        setMessagesError(error.message);
+        setIsMessagesLoading(false);
+      },
+    );
+  }, [activePanel, isAuthenticated]);
+
   const updateDraft = (update: (current: PortfolioState) => PortfolioState) => {
     setDraft((current) => update(current));
   };
@@ -169,14 +198,14 @@ export default function Admin() {
     setActiveEditor(id);
     setActivePanel(id);
     const option = editorOptions.find((item) => item.id === id);
-    setSelectedId(option ? (draft[option.key] as PortfolioEntry[])[0]?.id ?? '' : '');
+    setSelectedId(option ? sortPortfolioEntriesBySerial((draft[option.key] as PortfolioEntry[] | undefined) ?? [])[0]?.id ?? '' : '');
   };
 
   const updateSelectedEntry = (key: string, value: string | string[]) => {
     if (!selectedId) return;
     updateDraft((current) => ({
       ...current,
-      [editor.key]: (current[editor.key] as PortfolioEntry[]).map((entry) => {
+      [editor.key]: ((current[editor.key] as PortfolioEntry[] | undefined) ?? []).map((entry) => {
         if (entry.id !== selectedId) return entry;
         const updated = { ...entry, [key]: value };
         if (key === 'tags') delete updated.responsibilities;
@@ -187,8 +216,12 @@ export default function Admin() {
 
   const addEntry = () => {
     const id = crypto.randomUUID();
-    const next: PortfolioEntry = { id, serial: String(entries.length + 1) };
-    updateDraft((current) => ({ ...current, [editor.key]: [...(current[editor.key] as PortfolioEntry[]), next] }));
+    const highestSerial = entries.reduce((highest, entry) => {
+      const serial = Number(entry.serial);
+      return Number.isFinite(serial) ? Math.max(highest, serial) : highest;
+    }, 0);
+    const next: PortfolioEntry = { id, serial: String(highestSerial + 1) };
+    updateDraft((current) => ({ ...current, [editor.key]: [...((current[editor.key] as PortfolioEntry[] | undefined) ?? []), next] }));
     setSelectedId(id);
   };
 
@@ -196,7 +229,7 @@ export default function Admin() {
     if (!selectedId) return;
     updateDraft((current) => ({
       ...current,
-      [editor.key]: (current[editor.key] as PortfolioEntry[]).filter((entry) => entry.id !== selectedId),
+      [editor.key]: ((current[editor.key] as PortfolioEntry[] | undefined) ?? []).filter((entry) => entry.id !== selectedId),
     }));
     setSelectedId('');
   };
@@ -304,6 +337,7 @@ export default function Admin() {
                   {option.label}
                 </button>
               ))}
+              <button type="button" onClick={() => setActivePanel('messages')} className={`mt-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10 ${activePanel === 'messages' ? 'bg-white/10 text-orange-300' : 'text-white/80'}`}>Contact messages</button>
               <button type="button" onClick={() => setActivePanel('schedules')} className={`mt-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10 ${activePanel === 'schedules' ? 'bg-white/10 text-orange-300' : 'text-white/80'}`}>Schedules</button>
               <button type="button" onClick={() => setActivePanel('commands')} className={`rounded-lg px-3 py-2 text-left text-sm hover:bg-white/10 ${activePanel === 'commands' ? 'bg-white/10 text-orange-300' : 'text-white/80'}`}>Terminal commands</button>
             </nav>
@@ -364,7 +398,7 @@ export default function Admin() {
           <div className="mb-4 max-w-xl">
             <select aria-label={`Select ${editor.label} item`} value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className="w-full rounded-lg border border-white/15 bg-[#28212b] px-3 py-2">
               <option value="">Select item</option>
-              {entries.map((entry, index) => <option key={entry.id} value={entry.id}>{entry.serial}. {entryTitle(entry, index)}</option>)}
+              {orderedEntries.map((entry, index) => <option key={entry.id} value={entry.id}>{entry.serial}. {entryTitle(entry, index)}</option>)}
             </select>
           </div>
           {selectedEntry && (
@@ -387,6 +421,12 @@ export default function Admin() {
                   const listId = `${field.key}-suggestions`;
                   return <label key={field.key} className="space-y-1 text-sm"><span>{field.label}</span><input list={listId} value={String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value)} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" /><datalist id={listId}>{field.suggestions?.map((suggestion) => <option key={suggestion} value={suggestion} />)}</datalist></label>;
                 }
+                if (field.kind === 'select') {
+                  return <label key={field.key} className="space-y-1 text-sm"><span>{field.label}</span><select value={String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value)} className="w-full rounded-lg border border-white/15 bg-[#28212b] px-3 py-2"><option value="">Select an icon</option>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+                }
+                if (field.kind === 'textarea') {
+                  return <label key={field.key} className="space-y-1 text-sm"><span>{field.label}</span><textarea rows={3} value={String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value)} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" /></label>;
+                }
                 return <label key={field.key} className="space-y-1 text-sm"><span>{field.label}</span><input type={field.kind === 'url' ? 'url' : 'text'} value={String(fieldValue)} onChange={(event) => updateSelectedEntry(field.key, event.target.value)} className="w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2" /></label>;
               })}
             </div>
@@ -403,6 +443,29 @@ export default function Admin() {
           sections={draft.sections}
           onChange={(commands) => updateDraft((current) => ({ ...current, commands }))}
         />}
+        {activePanel === 'messages' && <section className="rounded-xl border border-white/10 bg-white/5 p-5">
+          <div className="mb-4">
+            <h2 className="text-xl font-medium">Contact messages</h2>
+            <p className="text-sm text-white/50">Messages submitted from the client portfolio.</p>
+          </div>
+          {isMessagesLoading && <p className="text-sm text-white/60">Loading messages…</p>}
+          {messagesError && <p role="alert" className="text-sm text-red-300">{messagesError}</p>}
+          {!isMessagesLoading && !messagesError && contactMessages.length === 0 && <p className="rounded-lg bg-black/20 p-4 text-sm text-white/50">No messages have been received.</p>}
+          {!messagesError && contactMessages.length > 0 && (
+            <div className="space-y-3">
+              {contactMessages.map((contactMessage) => (
+                <article key={contactMessage.id} className="rounded-lg border border-white/10 bg-black/20 p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="font-medium">{contactMessage.name}</h3>
+                    <time className="text-xs text-white/50">{contactMessage.createdAt?.toLocaleString() ?? 'Date unavailable'}</time>
+                  </div>
+                  <a className="mt-1 inline-block text-sm text-orange-300 hover:underline" href={`mailto:${contactMessage.email}`}>{contactMessage.email}</a>
+                  <p className="mt-3 whitespace-pre-wrap break-words text-sm text-white/80">{contactMessage.message}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>}
           </div>
         </div>
         {message && <p role={isMessageError ? 'alert' : 'status'} className={`fixed bottom-4 right-4 rounded-lg px-4 py-2 text-sm shadow-lg ${isMessageError ? 'bg-red-700' : 'bg-emerald-700'}`}>{message}</p>}
